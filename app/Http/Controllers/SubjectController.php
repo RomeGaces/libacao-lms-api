@@ -20,8 +20,8 @@ class SubjectController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('subject_name', 'like', "%{$search}%")
-                  ->orWhere('subject_code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('subject_code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -34,6 +34,26 @@ class SubjectController extends Controller
         return response()->json(
             $query->orderBy('subject_code')->paginate($perPage)
         );
+    }
+
+    public function getForSchedule(Request $request, $courseId)
+    {
+        $semesterId = $request->query('semester_id');
+        $yearLevel  = $request->query('year_level');
+
+        $query = Subject::where('course_id', $courseId);
+
+        if ($semesterId) {
+            $query->where('semester_id', $semesterId);
+        }
+
+        if ($yearLevel) {
+            $query->where('year_level', $yearLevel);
+        }
+
+        return response()->json([
+            'data' => $query->get(['id', 'subject_code', 'subject_name'])
+        ]);
     }
 
     /**
@@ -60,7 +80,7 @@ class SubjectController extends Controller
             'description' => 'nullable|string',
             'units' => 'required|integer|min:1',
 
-            'semester' => 'nullable|string|in:1st,2nd,Summer',
+            'semester_id' => 'required|exists:courses,id',
             'year_level' => 'nullable|integer|min:1|max:4',
 
             // prerequisite must reference subjects.id
@@ -104,7 +124,7 @@ class SubjectController extends Controller
             'description' => 'nullable|string',
 
             'units' => 'required|integer|min:1',
-            'semester' => 'nullable|string|in:1st,2nd,Summer',
+            'semester_id' => 'required|exists:courses,id',
             'year_level' => 'nullable|integer|min:1|max:4',
 
             'subject_prerequisite_id' => 'nullable|exists:subjects,id',

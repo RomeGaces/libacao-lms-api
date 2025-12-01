@@ -32,6 +32,17 @@ class RoomController extends Controller
         ]);
     }
 
+    public function getByBuilding($buildingName)
+    {
+        $rooms = Room::where('building_name', $buildingName)
+            ->orderBy('room_number')
+            ->get(['id', 'room_number', 'building_name', 'capacity']);
+
+        return response()->json([
+            'data' => $rooms
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

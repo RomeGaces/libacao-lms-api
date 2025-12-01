@@ -3,15 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassSchedule;
-use App\Models\ClassSection;
-use App\Models\Subject;
-use App\Models\Professor;
 use App\Models\Room;
+use App\Models\ClassSection;
+use App\Models\SchoolYear;
+use App\Models\StudentSubjectAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class ClassScheduleController extends Controller
 {
@@ -40,23 +38,66 @@ class ClassScheduleController extends Controller
             'course_id' => 'nullable|integer|exists:courses,id',
             'professor_id' => 'nullable|integer|exists:professors,id',
             'room_id' => 'nullable|integer|exists:rooms,id',
+            'section_id' => 'nullable|integer|exists:class_sections,id',
+            'student_id' => 'nullable|integer|exists:students,id',
             'status' => 'nullable|string|in:Pending,Finalized,pending,finalized',
         ]);
 
         $query = $this->baseQuery();
 
+        if (!empty($request->academic_year)) {
+            $query->whereHas(
+                'classSection.schoolYear',
+                fn($q) =>
+                $q->whereRaw("CONCAT(year_start, '-', year_end) = ?", [$request->academic_year])
+            );
+        }
+
+        if (!empty($request->year_level)) {
+            $query->whereHas(
+                'classSection',
+                fn($q) =>
+                $q->where('year_level', $request->year_level)
+            );
+        }
+
+        /* ------------------------------
+       SCHOOL YEAR & SEMESTER FILTER
+    ------------------------------ */
         if (!empty($validated['school_year_id'])) {
-            $query->whereHas('classSection', fn($q) => $q->where('school_year_id', $validated['school_year_id']));
+            $query->whereHas(
+                'classSection',
+                fn($q) =>
+                $q->where('school_year_id', $validated['school_year_id'])
+            );
         }
 
         if (!empty($validated['semester_id'])) {
-            $query->whereHas('classSection', fn($q) => $q->where('semester_id', $validated['semester_id']));
+            $query->whereHas(
+                'classSection',
+                fn($q) =>
+                $q->where('semester_id', $validated['semester_id'])
+            );
         }
 
+        /* ------------------------------
+       COURSE + SECTION FILTER
+    ------------------------------ */
         if (!empty($validated['course_id'])) {
-            $query->whereHas('classSection', fn($q) => $q->where('course_id', $validated['course_id']));
+            $query->whereHas(
+                'classSection',
+                fn($q) =>
+                $q->where('course_id', intval($validated['course_id']))
+            );
         }
 
+        if (!empty($validated['section_id'])) {
+            $query->where('class_section_id', $validated['section_id']);
+        }
+
+        /* ------------------------------
+       PROFESSOR & ROOM
+    ------------------------------ */
         if (!empty($validated['professor_id'])) {
             $query->where('professor_id', $validated['professor_id']);
         }
@@ -65,16 +106,38 @@ class ClassScheduleController extends Controller
             $query->where('room_id', $validated['room_id']);
         }
 
+        /* ------------------------------
+       ⭐ STUDENT FILTER (NEW)
+       Get class_sections where student is assigned
+    ------------------------------ */
+        if (!empty($validated['student_id'])) {
+            $studentId = $validated['student_id'];
+
+            $query->whereHas('classSection.studentSubjectAssignments', function ($q) use ($studentId) {
+                $q->where('student_id', $studentId);
+            });
+        }
+
+        /* ------------------------------
+       STATUS
+    ------------------------------ */
         if (!empty($validated['status'])) {
             $query->where('status', ucfirst(strtolower($validated['status'])));
         }
 
+        /* ------------------------------
+            MAPPING TO FRONTEND FORMAT
+        ------------------------------ */
         $schedules = $query->get()->map(function ($s) {
             return [
                 'id' => $s->id,
                 'title' => $s->subject?->subject_code . ' - ' . ($s->subject?->subject_name ?? 'Undefined'),
-                'professor' => $s->professor ? "{$s->professor->first_name} {$s->professor->last_name}" : 'Unassigned',
-                'room' => $s->room ? "{$s->room->room_number} - {$s->room->building_name}" : 'Unassigned',
+                'professor' => $s->professor
+                    ? "{$s->professor->first_name} {$s->professor->last_name}"
+                    : 'Unassigned',
+                'room' => $s->room
+                    ? "{$s->room->room_number} - {$s->room->building_name}"
+                    : 'Unassigned',
                 'section' => $s->classSection?->section_name ?? '-',
                 'day_of_week' => $s->day_of_week ?? '-',
                 'start_time' => $s->start_time ? Carbon::parse($s->start_time)->format('H:i') : null,
@@ -82,14 +145,16 @@ class ClassScheduleController extends Controller
             ];
         });
 
-        // group by day/time to make frontend consumption easier (same behavior as original)
+        /* ------------------------------
+       GROUP BY DAY + TIME
+    ------------------------------ */
         $grouped = $schedules
             ->groupBy(fn($s) => "{$s['day_of_week']}|{$s['start_time']}|{$s['end_time']}")
-            ->map(fn(Collection $group) => [
+            ->map(fn($group) => [
                 'day_of_week' => $group->first()['day_of_week'],
                 'start_time' => $group->first()['start_time'],
                 'end_time' => $group->first()['end_time'],
-                'count' => (int) $group->count(),
+                'count' => $group->count(),
                 'label' => $group->count() . ' classes',
                 'classes' => $group->values()->all(),
             ])
@@ -97,6 +162,7 @@ class ClassScheduleController extends Controller
 
         return response()->json($grouped);
     }
+
 
     /**
      * GET /api/schedules/{id}
@@ -154,6 +220,15 @@ class ClassScheduleController extends Controller
     {
         $schedule = ClassSchedule::findOrFail($id);
 
+        $section = $schedule->classSection;
+        $active = SchoolYear::where('is_active', 1)->first();
+
+        if (!$active || $section->school_year_id != $active->id) {
+            return response()->json([
+                'error' => 'Only schedules from the active school year can be edited.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'subject_id' => 'required|exists:subjects,id',
             'class_section_id' => 'nullable|exists:class_sections,id',
@@ -209,8 +284,35 @@ class ClassScheduleController extends Controller
             return false;
         }
 
+        // --- Room Capacity Conflict ---
+        if (!empty($data['room_id']) && !empty($data['class_section_id'])) {
+
+            $room = Room::find($data['room_id']);
+
+            // Determine subject_id (existing schedule or new payload)
+            $subjectId = $data['subject_id'] ?? null;
+            if (!$subjectId && $excludeId) {
+                $existingSchedule = ClassSchedule::find($excludeId);
+                $subjectId = $existingSchedule?->subject_id;
+            }
+
+            if ($room && $subjectId) {
+                // Count only the students enrolled in THIS subject for THIS section
+                $subjectStudentCount = \App\Models\StudentSubjectAssignment::where([
+                    'class_section_id' => $data['class_section_id'],
+                    'subject_id'       => $subjectId,
+                ])->count();
+
+                if ($subjectStudentCount > $room->capacity) {
+                    return true; // room capacity exceeded
+                }
+            }
+        }
+
+        // --- Existing Overlap Conflict Logic ---
         $query = ClassSchedule::where('day_of_week', $data['day_of_week']);
 
+        // Match same section/prof/room
         if (!empty($data['class_section_id'])) {
             $query->where('class_section_id', $data['class_section_id']);
         }
@@ -227,18 +329,19 @@ class ClassScheduleController extends Controller
             $query->where('id', '!=', $excludeId);
         }
 
-        // overlapping logic
+        // Overlapping time logic
         $query->where(function ($q) use ($data) {
             $q->whereBetween('start_time', [$data['start_time'], $data['end_time']])
-              ->orWhereBetween('end_time', [$data['start_time'], $data['end_time']])
-              ->orWhere(function ($q2) use ($data) {
-                  $q2->where('start_time', '<=', $data['start_time'])
-                     ->where('end_time', '>=', $data['end_time']);
-              });
+                ->orWhereBetween('end_time', [$data['start_time'], $data['end_time']])
+                ->orWhere(function ($q2) use ($data) {
+                    $q2->where('start_time', '<=', $data['start_time'])
+                        ->where('end_time', '>=', $data['end_time']);
+                });
         });
 
         return $query->exists();
     }
+
 
     /**
      * POST /api/schedules/check-conflict
@@ -259,9 +362,28 @@ class ClassScheduleController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $conflict = $this->hasConflict($validator->validated());
+        $data = $validator->validated();
 
-        return response()->json(['conflict' => $conflict]);
+        // Room capacity conflict
+        $capacityConflict = false;
+
+        if (!empty($data['room_id']) && !empty($data['class_section_id'])) {
+            $room = Room::find($data['room_id']);
+            $section = ClassSection::withCount('studentSubjectAssignments')
+                ->find($data['class_section_id']);
+
+            if ($room && $section) {
+                $capacityConflict = $section->student_subject_assignments_count > $room->capacity;
+            }
+        }
+
+        $timeConflict = $this->hasConflict($data);
+
+        return response()->json([
+            'conflict' => $timeConflict || $capacityConflict,
+            'time_conflict' => $timeConflict,
+            'capacity_conflict' => $capacityConflict
+        ]);
     }
 
     /**
@@ -271,7 +393,7 @@ class ClassScheduleController extends Controller
     public function getByTimeslot($day_of_week, $start_hour)
     {
         // normalize day_of_week to allowed enum
-        $allowed = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        $allowed = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         if (!in_array($day_of_week, $allowed)) {
             return response()->json(['message' => 'Invalid day_of_week'], 422);
         }

@@ -108,7 +108,7 @@ class StudentController extends Controller
         ];
     }
 
-    public function checkEmail(Request $request) 
+    public function checkEmail(Request $request)
     {
         $email = $request->query('email');
 
@@ -146,6 +146,22 @@ class StudentController extends Controller
         return response()->json($newNumber);
     }
 
+    public function search(Request $request)
+    {
+        $keyword = $request->input('keyword');
+
+        $query = Student::query();
+
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('first_name', 'LIKE', "%$keyword%")
+                    ->orWhere('last_name', 'LIKE', "%$keyword%")
+                    ->orWhere('student_number', 'LIKE', "%$keyword%");
+            });
+        }
+
+        return $query->orderBy('last_name')->limit(100)->get();
+    }
 
     /** Get single student with course */
     public function show($id)

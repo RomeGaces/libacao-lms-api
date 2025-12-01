@@ -39,4 +39,9 @@ class ClassSection extends Model
     {
         return $this->belongsTo(SchoolYear::class, 'school_year_id', 'id');
     }
+
+    public function semester()
+    {
+        return $this->belongsTo(Semester::class, 'semester_id', 'id');
+    }
 }

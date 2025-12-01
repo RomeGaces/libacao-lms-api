@@ -9,6 +9,7 @@ use App\Models\SchoolYear;
 use App\Models\Course;
 use App\Models\ClassSection;
 use App\Models\Student;
+use App\Models\Semester;
 
 class AdminController extends Controller
 {
@@ -161,6 +162,63 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'Master Setup executed successfully!'
+        ]);
+    }
+
+    // =======================
+    // GET /school-years
+    // =======================
+    public function schoolYears()
+    {
+        $years = SchoolYear::orderBy('year_start', 'desc')->get([
+            'id',
+            'year_start',
+            'year_end',
+            'is_active'
+        ]);
+
+        return response()->json([
+            'data' => $years
+        ]);
+    }
+
+    // =======================
+    // GET /semesters
+    // =======================
+    public function semesters()
+    {
+        // If you have a Semester model:
+        $semesters = Semester::orderBy('id')->get(['id', 'name', 'is_active']);
+
+        return response()->json([
+            'data' => $semesters
+        ]);
+    }
+
+    public function activeSchoolYear()
+    {
+        $active = SchoolYear::where('is_active', true)->first([
+            'id',
+            'year_start',
+            'year_end',
+            'is_active'
+        ]);
+
+        return response()->json([
+            'data' => $active
+        ]);
+    }
+
+    public function activeSemester()
+    {
+        $active = Semester::where('is_active', true)->first([
+            'id',
+            'name',
+            'is_active'
+        ]);
+
+        return response()->json([
+            'data' => $active
         ]);
     }
 }

@@ -67,6 +67,18 @@ class ProfessorController extends Controller
         return response()->json($professor->load('department'), 201);
     }
 
+    public function getByDepartment($departmentId)
+    {
+        $professors = Professor::where('department_id', $departmentId)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'middle_name']);
+
+        return response()->json([
+            'data' => $professors
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $professor = Professor::findOrFail($id);
@@ -90,6 +102,23 @@ class ProfessorController extends Controller
 
         $professor->update($validated);
         return response()->json($professor->load('department'));
+    }
+
+    public function search(Request $request)
+    {
+        $keyword = $request->input('keyword');
+
+        $query = Professor::query();
+
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('first_name', 'LIKE', "%$keyword%")
+                    ->orWhere('last_name', 'LIKE', "%$keyword%")
+                    ->orWhere('email', 'LIKE', "%$keyword%");
+            });
+        }
+
+        return $query->orderBy('last_name')->limit(100)->get();
     }
 
     public function destroy($id)

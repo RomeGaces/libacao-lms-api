@@ -25,7 +25,9 @@ return new class extends Migration
                 $table->unsignedTinyInteger('hours_per_week')->default(3);
                 $table->text('description')->nullable();
 
-                $table->enum('semester', ['1st', '2nd', 'Summer'])->nullable();
+                $table->foreignId('semester_id')
+                    ->constrained('semesters')
+                    ->cascadeOnDelete();
                 $table->integer('year_level')->nullable(); // 1–4
 
                 // Self-referencing prerequisite
@@ -38,7 +40,7 @@ return new class extends Migration
 
                 $table->index('course_id');
                 $table->index('year_level');
-                $table->index('semester');
+                $table->index('semester_id');
                 $table->index('subject_prerequisite_id');
             });
         }
