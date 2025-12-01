@@ -20,17 +20,23 @@ class ClassSectionController extends Controller
     /** GET /api/sections */
     public function index(Request $request)
     {
-        $query = ClassSection::with(['course:course_id,course_code,course_name']);
+        $query = ClassSection::with('course');
 
         if ($search = $request->input('search')) {
             $query->where('section_name', 'like', "%$search%");
         }
 
-        if ($request->course_id) $query->where('course_id', $request->course_id);
-        if ($request->semester) $query->where('semester', $request->semester);
-        if ($request->academic_year) $query->where('academic_year', $request->academic_year);
+        if ($request->course_id)
+            $query->where('course_id', $request->course_id);
 
-        return $query->orderBy('section_name')->paginate($request->per_page ?? 10);
+        if ($request->school_year_id)
+            $query->where('school_year_id', $request->school_year_id);
+
+        if ($request->semester_id)
+            $query->where('semester_id', $request->semester_id);
+
+        return $query->orderBy('section_name')
+            ->paginate($request->per_page ?? 10);
     }
 
     /** POST /api/sections */
@@ -38,10 +44,11 @@ class ClassSectionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'section_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:courses,course_id',
-            'academic_year' => 'required|string',
-            'semester' => 'required|string|in:1st,2nd,Summer',
+            'course_id' => 'required|exists:courses,id',
+            'school_year_id' => 'required|exists:school_years,id',
+            'semester_id' => 'required|exists:semesters,id',
             'year_level' => 'required|integer|min:1|max:5',
+            'capacity' => 'nullable|integer|min:1|max:200',
         ]);
 
         if ($validator->fails()) {
@@ -56,7 +63,7 @@ class ClassSectionController extends Controller
     /** GET /api/sections/{id} */
     public function show($id)
     {
-        return ClassSection::with(['course'])->findOrFail($id);
+        return ClassSection::with('course')->findOrFail($id);
     }
 
     /** PUT /api/sections/{id} */
@@ -66,10 +73,11 @@ class ClassSectionController extends Controller
 
         $validator = Validator::make($request->all(), [
             'section_name' => 'sometimes|string|max:255',
-            'course_id' => 'sometimes|exists:courses,course_id',
-            'academic_year' => 'sometimes|string',
-            'semester' => 'sometimes|string|in:1st,2nd,Summer',
+            'course_id' => 'sometimes|exists:courses,id',
+            'school_year_id' => 'sometimes|exists:school_years,id',
+            'semester_id' => 'sometimes|exists:semesters,id',
             'year_level' => 'sometimes|integer|min:1|max:5',
+            'capacity' => 'nullable|integer|min:1|max:200',
         ]);
 
         if ($validator->fails()) {
@@ -108,27 +116,25 @@ class ClassSectionController extends Controller
     {
         $section = ClassSection::findOrFail($id);
 
-        // students already assigned to this section
         $assignedIds = StudentSubjectAssignment::where('class_section_id', $id)
             ->pluck('student_id')
-            ->unique()
             ->toArray();
 
-        // Standard subjects = students must take these
+        // Subjects required for this section
         $standardSubjects = Subject::where([
             ['course_id', $section->course_id],
             ['year_level', $section->year_level],
-            ['semester', $section->semester]
-        ])->pluck('subject_id')->toArray();
+            ['semester_id', $section->semester_id]
+        ])->pluck('id')->toArray();
 
-        // Students who belong to the same course but NOT yet assigned
-        // OR are retaking subjects matching this section
+        // Students eligible (same course, not yet assigned)
         $eligible = Student::where('course_id', $section->course_id)
-            ->whereNotIn('student_id', $assignedIds)
+            ->whereNotIn('id', $assignedIds)
             ->get();
 
         return response()->json($eligible);
     }
+
 
     /** GET /api/sections/{id}/schedules */
     public function schedules($id)
@@ -146,14 +152,14 @@ class ClassSectionController extends Controller
         $standardSubjects = Subject::where([
             ['course_id', $section->course_id],
             ['year_level', $section->year_level],
-            ['semester', $section->semester]
+            ['semester_id', $section->semester_id]
         ])->get();
 
         $errors = [];
 
         foreach ($standardSubjects as $sub) {
             $schedule = ClassSchedule::where('class_section_id', $id)
-                ->where('subject_id', $sub->subject_id)
+                ->where('subject_id', $sub->id)
                 ->first();
 
             if (!$schedule) {
@@ -189,10 +195,11 @@ class ClassSectionController extends Controller
 
         foreach ($schedules as $a) {
             foreach ($schedules as $b) {
-                if ($a->class_schedule_id >= $b->class_schedule_id) continue;
+                if ($a->id >= $b->id) continue;
                 if ($a->day_of_week !== $b->day_of_week) continue;
 
-                $overlap = $a->start_time < $b->end_time && $b->start_time < $a->end_time;
+                $overlap = $a->start_time < $b->end_time &&
+                           $b->start_time < $a->end_time;
 
                 if ($overlap) {
                     if ($a->professor_id === $b->professor_id)
@@ -220,8 +227,8 @@ class ClassSectionController extends Controller
         $standardSubjects = Subject::where([
             ['course_id', $section->course_id],
             ['year_level', $section->year_level],
-            ['semester', $section->semester]
-        ])->pluck('subject_id')->toArray();
+            ['semester_id', $section->semester_id]
+        ])->pluck('id')->toArray();
 
         $assignments = StudentSubjectAssignment::with(['student', 'subject'])
             ->where('class_section_id', $id)
@@ -261,8 +268,8 @@ class ClassSectionController extends Controller
     public function assignStudent(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'student_id' => 'required|exists:students,student_id',
-            'subject_id' => 'required|exists:subjects,subject_id',
+            'student_id' => 'required|exists:students,id',
+            'subject_id' => 'required|exists:subjects,id',
         ]);
 
         if ($validator->fails())
@@ -301,7 +308,7 @@ class ClassSectionController extends Controller
             ->get();
 
         foreach ($students as $student) {
-            $this->assignAllStandardSubjectsToStudent($section, $student->student_id);
+            $this->assignAllStandardSubjectsToStudent($section, $student->id);
         }
 
         return response()->json(['message' => 'Students auto-assigned']);
@@ -312,14 +319,14 @@ class ClassSectionController extends Controller
         $standardSubjects = Subject::where([
             ['course_id', $section->course_id],
             ['year_level', $section->year_level],
-            ['semester', $section->semester]
+            ['semester_id', $section->semester_id]
         ])->get();
 
         foreach ($standardSubjects as $sub) {
             StudentSubjectAssignment::firstOrCreate([
                 'student_id' => $studentId,
-                'subject_id' => $sub->subject_id,
-                'class_section_id' => $section->class_section_id,
+                'subject_id' => $sub->id,
+                'class_section_id' => $section->id,
             ]);
         }
     }
@@ -336,7 +343,6 @@ class ClassSectionController extends Controller
      * ============================================================
      */
 
-    /** POST /api/sections/{id}/lock */
     public function lock($id)
     {
         $section = ClassSection::findOrFail($id);
@@ -344,7 +350,6 @@ class ClassSectionController extends Controller
         return response()->json(['message' => 'Section locked']);
     }
 
-    /** POST /api/sections/{id}/unlock */
     public function unlock($id)
     {
         $section = ClassSection::findOrFail($id);
@@ -353,11 +358,10 @@ class ClassSectionController extends Controller
     }
 
     /* ============================================================
-     * TIMETABLE EXPORT (Simple structure)
+     * TIMETABLE EXPORT
      * ============================================================
      */
 
-    /** GET /api/sections/{id}/timetable */
     public function timetable($id)
     {
         return ClassSchedule::with(['subject', 'professor', 'room'])

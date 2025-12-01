@@ -22,7 +22,7 @@ class ClassSection extends Model
 
     public function course()
     {
-        return $this->belongsTo(Course::class, 'course_id');
+        return $this->belongsTo(Course::class, 'course_id', 'id');
     }
 
     public function studentSubjectAssignments()
@@ -37,6 +37,6 @@ class ClassSection extends Model
 
     public function schoolYear()
     {
-        return $this->belongsTo(SchoolYear::class, 'school_year_id');
+        return $this->belongsTo(SchoolYear::class, 'school_year_id', 'id');
     }
 }
