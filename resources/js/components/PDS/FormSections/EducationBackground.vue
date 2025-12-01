@@ -90,7 +90,7 @@
 
 <script setup>
 import { Field, ErrorMessage, FieldArray, configure } from "vee-validate";
-import Button from "@/Components/Common/Button.vue";
+import Button from "@/components/Common/Button.vue";
 import { reactive } from "vue";
 
 const props = defineProps({
