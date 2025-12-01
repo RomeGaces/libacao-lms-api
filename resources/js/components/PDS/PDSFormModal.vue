@@ -46,7 +46,7 @@ import Form from "@/components/PDS/Form.vue";
 import Button from "../Common/Button.vue";
 import employeeService from "@/Services/employeeService.js";
 import { usePdsValidation } from "@/Composables/Validation/usePdsValidation.js";
-import notify from "@/services/NotificationService.js";
+import notify from "@/Services/NotificationService.js";
 
 // Define props
 const props = defineProps({

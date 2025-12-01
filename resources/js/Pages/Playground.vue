@@ -58,7 +58,7 @@
     import { ref, onMounted } from "vue";
     import Modal from "@/components/Common/Modal.vue";
     import Button from "@/components/Common/Button.vue";
-    import notify from "@/services/NotificationService.js";
+    import notify from "@/Services/NotificationService.js";
     import Card from "@/components/Common/Card.vue";
 
     const showModal = ref(false);
