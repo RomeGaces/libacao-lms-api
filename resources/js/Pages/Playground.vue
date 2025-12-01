@@ -56,22 +56,7 @@
             </div>
             
             <div class="components-wrapper">
-                <h3>Tooltip</h3>
-                <Tooltip text="Tooltip on Top" placement="top">
-                    <Button variant="secondary" size="sm">Top Tooltip</Button>
-                </Tooltip>
-
-                <Tooltip text="Tooltip on Bottom" placement="bottom">
-                    <Button variant="secondary" size="sm">Bottom Tooltip</Button>
-                </Tooltip>
-
-                <Tooltip text="Tooltip on Left" placement="left">
-                    <Button variant="secondary" size="sm">Left Tooltip</Button>
-                </Tooltip>
-
-                <Tooltip text="Tooltip on Right" placement="right">
-                    <Button variant="secondary" size="sm">Right Tooltip</Button>
-                </Tooltip>
+               
             </div>
 
             <div class="components-wrapper">
@@ -94,7 +79,6 @@
     import notify from "@/Services/NotificationService.js";
     import Card from "@/components/Common/Card.vue";
     import Dropdown from "../Components/Common/Dropdown.vue";
-    import Tooltip from "../Components/Common/Tooltip.vue";
     import Input from "../Components/Common/Input.vue";
 
     const showModal = ref(false);
