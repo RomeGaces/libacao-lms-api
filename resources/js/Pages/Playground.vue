@@ -46,9 +46,6 @@
 
             <div class="components-wrapper">
                 <h3>Input</h3>
-                <Input v-model="name" name="awdaw" placeholder="Enter your name" size="sm" />
-                <Input v-model="name" name="drgdrg" placeholder="Enter your name" size="md" />
-                <Input v-model="name" name="jijo" placeholder="Enter your name" size="lg" />
             </div>
 
             <!-- Modal -->
