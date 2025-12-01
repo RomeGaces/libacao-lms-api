@@ -9,7 +9,7 @@ class Registrar extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'registrar_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'first_name',

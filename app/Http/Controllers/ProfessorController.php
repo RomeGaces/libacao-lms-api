@@ -60,7 +60,7 @@ class ProfessorController extends Controller
             'hire_date' => 'nullable|date',
             'specialization' => 'nullable|string',
             'status' => 'nullable|string',
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         $professor = Professor::create($validated);
@@ -85,7 +85,7 @@ class ProfessorController extends Controller
             'hire_date' => 'nullable|date',
             'specialization' => 'nullable|string',
             'status' => 'nullable|string',
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         $professor->update($validated);

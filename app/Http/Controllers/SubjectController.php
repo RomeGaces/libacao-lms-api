@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class SubjectController extends Controller
 {
@@ -14,7 +15,7 @@ class SubjectController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Subject::with('course:course_id,course_code,course_name');
+        $query = Subject::with('course:id,course_code,course_name');
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -29,9 +30,10 @@ class SubjectController extends Controller
         }
 
         $perPage = (int) $request->input('per_page', 10);
-        $subjects = $query->orderBy('subject_code')->paginate($perPage);
 
-        return response()->json($subjects);
+        return response()->json(
+            $query->orderBy('subject_code')->paginate($perPage)
+        );
     }
 
     /**
@@ -39,7 +41,7 @@ class SubjectController extends Controller
      */
     public function show($id)
     {
-        $subject = Subject::with('course:course_id,course_code,course_name')->findOrFail($id);
+        $subject = Subject::with('course:id,course_code,course_name')->findOrFail($id);
         return response()->json($subject);
     }
 
@@ -49,22 +51,37 @@ class SubjectController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'course_id' => 'required|exists:courses,course_id',
+            // correct: courses.id (NOT courses.course_id)
+            'course_id' => 'required|exists:courses,id',
+
             'subject_code' => 'required|string|unique:subjects,subject_code',
             'subject_name' => 'required|string',
+
             'description' => 'nullable|string',
             'units' => 'required|integer|min:1',
+
             'semester' => 'nullable|string|in:1st,2nd,Summer',
             'year_level' => 'nullable|integer|min:1|max:4',
+
+            // prerequisite must reference subjects.id
+            'subject_prerequisite_id' => 'nullable|exists:subjects,id',
+            'type' => 'nullable|in:Lecture,Laboratory',
+            'hours_per_week' => 'nullable|integer|min:1|max:15',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         $subject = Subject::create($validator->validated());
 
-        return response()->json(['message' => 'Subject created successfully', 'data' => $subject], 201);
+        return response()->json([
+            'message' => 'Subject created successfully',
+            'data' => $subject,
+        ], 201);
     }
 
     /**
@@ -75,22 +92,39 @@ class SubjectController extends Controller
         $subject = Subject::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'course_id' => 'required|exists:courses,course_id',
-            'subject_code' => 'required|string|unique:subjects,subject_code,' . $id . ',subject_id',
+            'course_id' => 'required|exists:courses,id',
+
+            'subject_code' => [
+                'required',
+                'string',
+                Rule::unique('subjects', 'subject_code')->ignore($id), // correct PK
+            ],
+
             'subject_name' => 'required|string',
             'description' => 'nullable|string',
+
             'units' => 'required|integer|min:1',
             'semester' => 'nullable|string|in:1st,2nd,Summer',
             'year_level' => 'nullable|integer|min:1|max:4',
+
+            'subject_prerequisite_id' => 'nullable|exists:subjects,id',
+            'type' => 'nullable|in:Lecture,Laboratory',
+            'hours_per_week' => 'nullable|integer|min:1|max:15',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
         $subject->update($validator->validated());
 
-        return response()->json(['message' => 'Subject updated successfully', 'data' => $subject->fresh()]);
+        return response()->json([
+            'message' => 'Subject updated successfully',
+            'data' => $subject->fresh(),
+        ]);
     }
 
     /**
@@ -106,7 +140,6 @@ class SubjectController extends Controller
 
     /**
      * GET /api/courses/{courseId}/subjects
-     * Convenience method to list by course (optional)
      */
     public function getByCourse($courseId)
     {

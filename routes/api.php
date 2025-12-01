@@ -14,12 +14,6 @@ use App\Http\Controllers\StudentSubjectAssignmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 
-
-
-use App\Http\Controllers\InstructorsController;
-use App\Http\Controllers\SectionController;
-
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -30,9 +24,6 @@ use App\Http\Controllers\SectionController;
 | which is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-//Route::post('/createToken', [LoginController::class, 'createToken']);
-
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
@@ -103,13 +94,7 @@ Route::middleware('auth:sanctum')->get('schedules/query', [ClassScheduleControll
 Route::middleware('auth:sanctum')->post('schedules/check-conflict', [ClassScheduleController::class, 'checkConflict']);
 Route::middleware('auth:sanctum')->get('schedules/timeslot/{day_of_week}/{start_hour}', [ClassScheduleController::class, 'getByTimeslot']);
 Route::middleware('auth:sanctum')->apiResource('schedules', ClassScheduleController::class);
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::apiResource('schedules', ClassScheduleController::class);
-//     Route::get('schedules/conflicts', [ClassScheduleController::class, 'checkConflicts']);
-//     Route::get('schedules/query', [ClassScheduleController::class, 'getQuery']); 
-//     Route::post('schedules/check-conflict', [ClassScheduleController::class, 'checkConflict']);
-//     Route::get('schedules/timeslot/{day_of_week}/{start_hour}', [ClassScheduleController::class, 'getByTimeslot']);
-// });
+
 Route::middleware('auth:sanctum')->prefix('students')->group(function () {
 
     // STATIC ROUTES FIRST
@@ -139,19 +124,3 @@ Route::middleware(['auth:sanctum'])->post('/master-setup',
 Route::get('/debug-log', function () {
     return nl2br(file_get_contents(storage_path('logs/laravel.log')));
 });
-// Route::middleware('api')->group(function () {
-//     Route::apiResource('instructors', InstructorsController::class);
-// });
-
-
-
-// //PAO Request
-// Route::prefix('pao-requests')->middleware('auth:sanctum')->group(function () {
-//     Route::post('/', [PaoRequestController::class, 'store']);
-//     Route::get('/', [PaoRequestController::class, 'index']);
-//     Route::get('/{id}', [PaoRequestController::class, 'show']);
-//     Route::patch('/{id}', [PaoRequestController::class, 'update']);
-//     Route::delete('/{id}', [PaoRequestController::class, 'destroy']); // delete full request
-//     Route::delete('/{requestId}/objects/{objectId}', [PaoRequestController::class, 'destroyObject']); // delete single object
-//     Route::delete('/{requestId}/groups/{groupId}', [PaoRequestController::class, 'destroyGroup']);
-// });

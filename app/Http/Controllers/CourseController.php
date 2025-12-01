@@ -46,7 +46,7 @@ class CourseController extends Controller
             'course_name' => 'required|string',
             'description' => 'nullable|string',
             'duration_years' => 'nullable|integer|min:1',
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         $course = Course::create($validated);
@@ -65,7 +65,7 @@ class CourseController extends Controller
             'course_name' => 'required|string',
             'description' => 'nullable|string',
             'duration_years' => 'nullable|integer|min:1',
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         $course->update($validated);

@@ -22,7 +22,7 @@ class RegistrarController extends Controller
             'email' => 'required|email|unique:registrars,email',
             'password' => 'required|string|min:8',
             'employee_number' => 'required|string|unique:registrars,employee_number',
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -47,7 +47,7 @@ class RegistrarController extends Controller
             'email' => "sometimes|email|unique:registrars,email,{$id},registrar_id",
             'password' => 'nullable|string|min:8',
             'employee_number' => "sometimes|string|unique:registrars,employee_number,{$id},registrar_id",
-            'department_id' => 'nullable|exists:departments,department_id',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
         if (!empty($validated['password'])) {

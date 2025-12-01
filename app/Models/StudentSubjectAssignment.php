@@ -10,7 +10,7 @@ class StudentSubjectAssignment extends Model
     use HasFactory;
     public $timestamps = true;
 
-    protected $primaryKey = 'assignment_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'student_id',
