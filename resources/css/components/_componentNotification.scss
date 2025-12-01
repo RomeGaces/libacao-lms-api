@@ -1,0 +1,100 @@
+.notification {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+
+    span {
+      margin-right: 20px;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        top: 14px;
+      }
+      .close-btn img {
+        display: block;
+        height: 10px;
+        width: 10px;
+      }
+      .close-btn:hover {
+        opacity: 0.7;
+      }
+  }
+  
+  /* Types */
+  .notification.success {
+    background-color: rgb(193 247 205);
+    border: 1px solid #94d394;
+    color: #008000;
+  }
+  .notification.error {
+    background-color: rgb(255 238 239);
+    border: 1px solid #d67575;
+    color: #b03a3a;
+  }
+  .notification.warning {
+    background-color: rgb(255 241 221);
+    border: 1px solid #e9c24b;
+    color: #b66f08;
+  }
+  
+  /* Inline */
+  .notification.inline {
+    position: relative;
+    margin: 10px 0;
+  }
+  
+  /* Toast positions */
+  .notification.top-left,
+  .notification.top-right,
+  .notification.bottom-left,
+  .notification.bottom-right {
+    position: fixed;
+    margin: 0;
+    min-width: 250px;
+  }
+  
+  .notification.top-left {
+    top: 20px;
+    left: 20px;
+  }
+  .notification.top-right {
+    top: 20px;
+    right: 20px;
+  }
+  .notification.bottom-left {
+    bottom: 20px;
+    left: 20px;
+  }
+  .notification.bottom-right {
+    bottom: 20px;
+    right: 20px;
+  }
+    
+  /* Vue transition classes */
+  .notification-enter-active,
+  .notification-leave-active {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .notification-enter-from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  
+  .notification-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }

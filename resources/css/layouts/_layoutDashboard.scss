@@ -1,0 +1,65 @@
+.dashboard {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    grid-template-rows: 60px 1fr;
+    grid-template-areas:
+        "header header" /* header spans 2 columns */
+        "sidebar main"; /* sidebar left, main right */
+    height: 100vh;
+}
+
+/* Close Button (Mobile Only) */
+.close-btn {
+    display: none;
+    position: absolute;
+    top: 0px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: white;
+}
+
+.main h1 {
+    font-size: 20px;
+    color: #5b5b5b;
+    margin-bottom: 20px;
+}
+
+/* Menu Button for Mobile */
+.menu-btn {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #5b5b5b;
+}
+
+/* Main Content */
+.main {
+    grid-area: main;
+    padding: 20px;
+    background-color: #fff;
+    overflow-y: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: 60px auto;
+        grid-template-areas:
+            "header"
+            "main";
+    }
+
+    .menu-btn {
+        display: block;
+    }
+
+    .close-btn {
+        display: block;
+    }
+}

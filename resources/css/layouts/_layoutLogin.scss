@@ -1,0 +1,128 @@
+main.login-container {
+		display:flex;
+		height:100vh;
+		input:focus {
+		outline:none;
+		border:1px solid #ccc;
+		border-radius:0;
+	}
+	/* Left side (Image) */
+		section.left {
+		flex:1;
+		background:url('images/login-banner.webp') no-repeat center center;
+		background-size:cover;
+	}
+	/* Right side (Login Form) */
+		section.right {
+		flex:1;
+		display:flex;
+		flex-direction:column;
+		justify-content:center;
+		align-items:center;
+		background-color:#fff;
+		padding:40px;
+	}
+	/* Logo and Title */
+		.logo {
+		width:100px;
+		height:100px;
+		object-fit:contain;
+		margin:50px 0 30px 0;
+	}
+	h1 {
+		font-size:28px;
+		color:#5B5B5B;
+		/* Theme color */
+		margin-bottom:30px;
+	}
+	/* Form */
+		form {
+		display:flex;
+		flex-direction:column;
+		width:100%;
+		max-width:350px;
+	}
+	label {
+		margin-top:10px;
+		font-size:14px;
+		color:#555;
+		font-weight:bold;
+	}
+	input {
+		padding:12px;
+		margin-top:5px;
+		border:1px solid #e6e6e6;
+		/* Updated border color */
+		font-size:16px;
+		border-radius:0;
+		/* No border radius */
+	}
+	/* Placeholder color */
+		input::placeholder {
+		color:#d4d4d4;
+	}
+
+	.forgot-password {
+		text-align:right;
+		margin-top:13px;
+		margin-bottom:15px;
+	}
+	.forgot-password a {
+		font-size:14px;
+		color:#5B5B5B;
+		text-decoration:none;
+		font-weight:bold;
+	}
+	.forgot-password a:hover {
+		text-decoration:underline;
+	}
+	.error-message {
+		width:100%;
+		max-width:350px;
+		margin-bottom:15px;
+		padding:10px;
+		color:#cc0000;
+		/* red text */
+			border-radius:4px;
+		font-size:14px;
+		text-align:center;
+		font-weight:bold;
+	}
+	.password-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+	
+	.password-wrapper input {
+		width: 100%;
+		padding-right: 40px; /* space for the toggle button */
+	}
+	
+	.toggle-password {
+		position: absolute;
+		right: 10px;
+		top: 60%;
+		transform: translateY(-50%);
+		cursor: pointer;
+	}
+	
+	.toggle-password img {
+		width: 20px;
+		height: 20px;
+		object-fit: contain;
+	}
+}
+
+/* Responsive for mobile */
+@media (max-width:768px) {
+		main.login-container {
+		flex-direction:column;
+	}
+	section.left {
+		height:40vh;
+	}
+	section.right {
+		height:60vh;
+	}
+}

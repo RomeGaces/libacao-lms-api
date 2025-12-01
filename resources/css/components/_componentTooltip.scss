@@ -1,0 +1,89 @@
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    margin: 0px;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    z-index: 100;
+    background-color: #5b5b5b;
+    color: #fff;
+    padding: 6px 10px;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+    font-size: 12px;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* === Placements === */
+.tooltip-top .tooltip-text {
+    bottom: 135%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.tooltip-top .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #5b5b5b transparent transparent transparent;
+}
+
+.tooltip-bottom .tooltip-text {
+    top: 135%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.tooltip-bottom .tooltip-text::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #5b5b5b transparent;
+}
+
+.tooltip-left .tooltip-text {
+    right: 110%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.tooltip-left .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent transparent #5b5b5b;
+}
+
+.tooltip-right .tooltip-text {
+    left: 110%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.tooltip-right .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #5b5b5b transparent transparent;
+}

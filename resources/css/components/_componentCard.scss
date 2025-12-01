@@ -1,0 +1,47 @@
+.card {
+    background: #ffffff;
+    box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.1) !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.18s ease;
+}
+
+/* Sizes */
+.card-sm {
+    width: 200px;
+    font-size: 12px;
+    padding: 12px;
+}
+.card-md {
+    width: 300px;
+    font-size: 14px;
+    padding: 16px;
+}
+.card-lg {
+    width: 400px;
+    font-size: 16px;
+    padding: 20px;
+}
+
+/* Sections */
+.card-header {
+    font-weight: 700;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 6px;
+    color: #333;
+}
+
+.card-body {
+    flex: 1;
+    color: #444;
+    margin-bottom: 8px;
+}
+
+.card-footer {
+    font-size: 13px;
+    color: #666;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+}

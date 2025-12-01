@@ -1,0 +1,288 @@
+.modal-body {
+    .pds-form {
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+
+        .btn-import-employee {
+            width: 100%;
+        }
+    }
+
+    /* Sidebar / Navigation */
+    .pds-nav {
+        width: 220px;
+        min-width: 220px;
+        flex-shrink: 0;
+        border-right: 1px solid #eee;
+        padding-right: 20px;
+        overflow-y: auto;
+        transition: none !important;
+
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+            display: flex;
+
+            &:hover,
+            &.active {
+                background: #eaeaea;
+                color: #333;
+                font-weight: bold;
+            }
+
+            img {
+                height: 15px;
+                width: 15px;
+            }
+
+            .tabs-status {
+                margin-left: 4px;
+
+                img {
+                    height: 15px;
+                    width: 15px;
+                }
+            }
+        }
+
+        .tab-valid {
+            color: #008000;
+        }
+    }
+
+    /* Form Section */
+    .form-section {
+        flex: 1;
+        overflow-y: auto;
+        padding-left: 20px;
+        padding-right: 30px;
+
+        h3 {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .input-wrapper {
+            &.span-2 { grid-column: span 2; }
+            &.span-3 { grid-column: span 3; }
+            &.span-4 { grid-column: span 4; }
+            margin-bottom: 10px; // common spacing
+        } 
+    }
+
+    /* Shared Grid Styles */
+    .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    .date-range {
+        display: flex;
+        gap: 12px;
+
+        input {
+            flex: 1;
+        }
+    }
+
+    .personal-form-grid {
+        .personal-info,
+        .govt-info,
+        .contact-address-info {
+            @extend .grid-4;
+            margin-bottom: 40px;
+        }
+    }
+
+    .education-form-grid,
+    .eligibility-form-grid,
+    .voluntary-form-grid,
+    .training-form-grid,
+    .other-form-grid,
+    .family-form-grid,
+    .work-form-grid {
+        @extend .grid-4;
+    }
+
+    /* Inclusive Dates */
+    .work-form-grid .inclusive-date,
+    .education-form-grid .attendance,
+    .voluntary-form-grid .inclusive-date,
+    .training-form-grid .inclusive-date {
+        grid-column: span 2;
+
+        .date-range {
+            @extend .date-range;
+        }
+    }
+
+    .education-form-grid + .education-form-grid {
+        margin-top: 40px;
+    }
+
+    .education-form-grid {
+        position: relative;
+
+        img {
+            position: absolute;
+            height: 12px;
+            width: 12px;
+            right: 0;
+            top: -10px;
+        }
+    }
+
+    .btn-add-education {
+        margin-top: 15px;
+
+        img {
+            height: 12px;
+            width: 12px;
+        }
+        
+    }
+
+    /* Other Form Specific */
+    .other-form-grid {
+        .references {
+            grid-column: span 4;
+
+            .btn-add-reference img {
+                height: 15px;
+                width: 15px;
+            }
+
+            .ref-inputs {
+                display: flex;
+                gap: 12px;
+                margin: 10px 0;
+
+                .address-wrapper {
+                    flex: 1;
+                }
+
+                label {
+                    font-size: 10px;
+                }
+
+                input {
+                    flex: 1;
+                }
+            }
+
+            .remove-ref-icon {
+                height: 12px;
+                width: 12px;
+                margin-top: 25px;
+            }
+        }
+    }
+
+    /* Family Form */
+    .family-form-grid .family {
+        grid-column: span 4;
+
+        .input-wrapper {
+            margin-bottom: 10px;
+        }
+
+        .btn-add-children {
+            margin-top: 10px;
+        
+            img {
+                height: 15px;
+                width: 15px;
+            }
+        }
+
+        .spouse-info,
+        .father-info,
+        .mother-info,
+        .children-info {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+
+            label {
+                font-size: 10px;
+            }
+
+            input {
+                flex: 1;
+            }
+        }
+
+        .children-info .remove-children-icon {
+            height: 12px;
+            width: 12px;
+            margin-top: 25px;
+        }
+    }
+
+    label {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: block;
+        color: #898989;
+    }
+
+    input,
+    select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 2px rgba(0,0,0,0.2);
+        }
+    }
+
+    /* ✅ Responsive - Mobile */
+    @media (max-width: 768px) {
+        .pds-form {
+            flex-direction: column;
+        }
+
+        .pds-nav {
+            width: 100%;
+            min-width: unset;
+            border-right: none;
+            border-bottom: 1px solid #eee;
+
+            ul {
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                white-space: nowrap;
+                padding: 0;
+                margin: 0;
+            }
+
+            li {
+                flex: none;
+                padding: 8px 12px;
+            }
+        }
+
+        .form-section {
+            padding: 16px;
+        }
+    }
+}

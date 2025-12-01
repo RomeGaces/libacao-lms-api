@@ -1,0 +1,56 @@
+// Components
+@use 'components/componentModal';
+@use 'components/componentButton';
+@use 'components/componentNotification';
+@use 'components/componentCard';
+@use 'components/componentDropdown';
+@use 'components/componentTooltip';
+@use 'components/componentInput';
+
+// Layouts
+@use 'layouts/layoutEmployeeTab';
+@use 'layouts/layoutPDSFormModal';
+@use 'layouts/layoutLogin';
+@use 'layouts/layoutDashboard';
+@use 'layouts/layoutHeader';
+@use 'layouts/layoutSidebar';
+@use 'layouts/layoutDashboardTab';
+@use 'layouts/layoutAccountTab';
+@use 'layouts/layoutAuditLogTab';
+@use 'layouts/layoutSalaryScheduleTab';
+@use 'layouts/layoutPlantillaTab';
+
+:root {
+    --color-primary: #5b5b5b;
+    --color-primary-hover: #4a4a4a;
+  
+    --color-secondary: #eaeaea;
+    --color-secondary-hover: #d6d6d6;
+  
+    --color-white: #ffffff;
+    --color-black: #000000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+.input-error-msg {
+    color: #d62323;
+    font-size: 12px;
+}
+
+html, body {
+    height: 100%;
+
+    .modal-open {
+        overflow: hidden;
+    }
+}
+
+.tab-invalid {
+    color: #d62323;
+}
