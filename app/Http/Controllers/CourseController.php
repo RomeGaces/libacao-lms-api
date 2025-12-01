@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class CourseController extends Controller
 {
@@ -57,7 +58,10 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
 
         $validated = $request->validate([
-            'course_code' => 'required|string|unique:courses,course_code,' . $id . ',course_id',
+            'course_code' => [
+                'required',
+                Rule::unique('courses', 'course_code')->ignore($id),
+            ],
             'course_name' => 'required|string',
             'description' => 'nullable|string',
             'duration_years' => 'nullable|integer|min:1',
