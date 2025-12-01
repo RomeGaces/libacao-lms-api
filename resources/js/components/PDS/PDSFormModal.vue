@@ -44,7 +44,7 @@ import { ref, watch, computed } from "vue";
 import Modal from "@/components/Common/Modal.vue";
 import Form from "@/components/PDS/Form.vue";
 import Button from "../Common/Button.vue";
-import employeeService from "@/services/employeeService.js";
+import employeeService from "@/Services/employeeService.js";
 import { usePdsValidation } from "@/Composables/Validation/usePdsValidation.js";
 import notify from "@/services/NotificationService.js";
 
