@@ -11,27 +11,29 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('professors', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->string('first_name');
-            $table->string('last_name');
-            $table->string('middle_name')->nullable();
-            $table->enum('gender', ['Male', 'Female']);
-            $table->string('email')->unique();
-            $table->string('phone_number')->nullable();
-            $table->date('hire_date')->nullable();
-            $table->string('specialization')->nullable();
-            $table->string('status')->default('active');
-            $table->foreignId('department_id')
-                ->nullable()
-                ->constrained('departments')
-                ->nullOnDelete();
-            $table->timestamps();
+        if (!Schema::hasTable('professors')) {
+            Schema::create('professors', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->string('first_name');
+                $table->string('last_name');
+                $table->string('middle_name')->nullable();
+                $table->enum('gender', ['Male', 'Female']);
+                $table->string('email')->unique();
+                $table->string('phone_number')->nullable();
+                $table->date('hire_date')->nullable();
+                $table->string('specialization')->nullable();
+                $table->string('status')->default('active');
+                $table->foreignId('department_id')
+                    ->nullable()
+                    ->constrained('departments')
+                    ->nullOnDelete();
+                $table->timestamps();
 
-            $table->index('department_id');
-            $table->index('email'); // faster lookup
-        });
+                $table->index('department_id');
+                $table->index('email'); // faster lookup
+            });
+        }
     }
 
     /**

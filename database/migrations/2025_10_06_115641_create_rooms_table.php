@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rooms', function (Blueprint $table) {
-            $table->id();
-            $table->string('room_number')->unique();
-            $table->string('building_name');
-            $table->integer('capacity')->default(0);
-            $table->enum('type', ['Lecture', 'Laboratory', 'Online'])->default('Lecture');
-            $table->timestamps();
+        if (!Schema::hasTable('rooms')) {
+            Schema::create('rooms', function (Blueprint $table) {
+                $table->id();
+                $table->string('room_number')->unique();
+                $table->string('building_name');
+                $table->integer('capacity')->default(0);
+                $table->enum('type', ['Lecture', 'Laboratory', 'Online'])->default('Lecture');
+                $table->timestamps();
 
-            $table->index('room_number');
-            $table->index('type');
-        });
+                $table->index('room_number');
+                $table->index('type');
+            });
+        }
     }
 
     /**

@@ -11,25 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('student_subject_assignments', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            
-            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
-            $table->foreignId('subject_id')->constrained('subjects')->cascadeOnDelete();
-            $table->foreignId('class_section_id')->constrained('class_sections')->cascadeOnDelete();
-            $table->enum('status', ['Enrolled', 'Dropped', 'Completed'])->default('Enrolled');
-            $table->string('grade')->nullable();
-            $table->timestamps();
+        if (!Schema::hasTable('student_subject_assignments')) {
+            Schema::create('student_subject_assignments', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
 
-            $table->index('student_id');
-            $table->index('subject_id');
-            $table->index('class_section_id');
-            $table->index('status');
+                $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
+                $table->foreignId('subject_id')->constrained('subjects')->cascadeOnDelete();
+                $table->foreignId('class_section_id')->constrained('class_sections')->cascadeOnDelete();
+                $table->enum('status', ['Enrolled', 'Dropped', 'Completed'])->default('Enrolled');
+                $table->string('grade')->nullable();
+                $table->timestamps();
 
-            $table->index(['student_id', 'status'], 'idx_student_status');
-            $table->index(['class_section_id', 'status'], 'idx_section_status');
-        });
+                $table->index('student_id');
+                $table->index('subject_id');
+                $table->index('class_section_id');
+                $table->index('status');
+
+                $table->index(['student_id', 'status'], 'idx_student_status');
+                $table->index(['class_section_id', 'status'], 'idx_section_status');
+            });
+        }
     }
     /**
      * Reverse the migrations.

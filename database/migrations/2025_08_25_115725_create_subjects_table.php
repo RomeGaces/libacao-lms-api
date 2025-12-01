@@ -11,35 +11,37 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('subjects', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->foreignId('course_id')
-                ->constrained('courses')
-                ->cascadeOnDelete();
-            $table->string('subject_code')->unique();
-            $table->string('subject_name');
-            $table->unsignedTinyInteger('units')->default(3);
-            $table->enum('type', ['Lecture', 'Laboratory'])->default('Lecture');
-            $table->unsignedTinyInteger('hours_per_week')->default(3);
-            $table->text('description')->nullable();
+        if (!Schema::hasTable('subjects')) {
+            Schema::create('subjects', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->foreignId('course_id')
+                    ->constrained('courses')
+                    ->cascadeOnDelete();
+                $table->string('subject_code')->unique();
+                $table->string('subject_name');
+                $table->unsignedTinyInteger('units')->default(3);
+                $table->enum('type', ['Lecture', 'Laboratory'])->default('Lecture');
+                $table->unsignedTinyInteger('hours_per_week')->default(3);
+                $table->text('description')->nullable();
 
-            $table->enum('semester', ['1st', '2nd', 'Summer'])->nullable();
-            $table->integer('year_level')->nullable(); // 1–4
+                $table->enum('semester', ['1st', '2nd', 'Summer'])->nullable();
+                $table->integer('year_level')->nullable(); // 1–4
 
-            // Self-referencing prerequisite
-            $table->foreignId('subject_prerequisite_id')
-                ->nullable()
-                ->constrained('subjects')
-                ->nullOnDelete();
+                // Self-referencing prerequisite
+                $table->foreignId('subject_prerequisite_id')
+                    ->nullable()
+                    ->constrained('subjects')
+                    ->nullOnDelete();
 
-            $table->timestamps();
+                $table->timestamps();
 
-            $table->index('course_id');
-            $table->index('year_level');
-            $table->index('semester');
-            $table->index('subject_prerequisite_id');
-        });
+                $table->index('course_id');
+                $table->index('year_level');
+                $table->index('semester');
+                $table->index('subject_prerequisite_id');
+            });
+        }
     }
 
     /**

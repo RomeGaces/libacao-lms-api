@@ -11,29 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('section_subjects', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
+        if (!Schema::hasTable('section_subjects')) {
+            Schema::create('section_subjects', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
 
-            // changed: referenced 'class_sections' (not 'sections')
-            $table->foreignId('section_id')
-                ->constrained('class_sections')
-                ->cascadeOnDelete();
+                // changed: referenced 'class_sections' (not 'sections')
+                $table->foreignId('section_id')
+                    ->constrained('class_sections')
+                    ->cascadeOnDelete();
 
-            $table->foreignId('subject_id')
-                ->constrained('subjects')
-                ->cascadeOnDelete();
+                $table->foreignId('subject_id')
+                    ->constrained('subjects')
+                    ->cascadeOnDelete();
 
-            $table->unique(
-                ['section_id', 'subject_id'],
-                'unique_section_subject'
-            );
+                $table->unique(
+                    ['section_id', 'subject_id'],
+                    'unique_section_subject'
+                );
 
-            $table->timestamps();
+                $table->timestamps();
 
-            $table->index('section_id');
-            $table->index('subject_id');
-        });
+                $table->index('section_id');
+                $table->index('subject_id');
+            });
+        }
     }
 
     public function down(): void

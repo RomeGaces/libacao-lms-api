@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('class_sections')) {
         Schema::create('class_sections', function (Blueprint $table) {
             $table->id('class_section_id');
             $table->string('section_name'); // e.g. "BSIT 3A" or "EDUC 1B"
@@ -19,6 +20,7 @@ return new class extends Migration
             $table->string('semester');
             $table->timestamps();
         });
+    }
     }
 
     /**

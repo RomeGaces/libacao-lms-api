@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('school_years', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->year('year_start');
-            $table->year('year_end');
-            $table->boolean('is_active')->default(false);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('school_years')) {
+            Schema::create('school_years', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->year('year_start');
+                $table->year('year_end');
+                $table->boolean('is_active')->default(false);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

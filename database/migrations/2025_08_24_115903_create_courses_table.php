@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('courses', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->string('course_code')->unique();
-            $table->string('course_name');
-            $table->text('description')->nullable();
-            $table->integer('duration_years')->default(4); // e.g., 4-year program
-            $table->foreignId('department_id')
-                  ->constrained('departments')
-                  ->cascadeOnDelete();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('courses')) {
+            Schema::create('courses', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->string('course_code')->unique();
+                $table->string('course_name');
+                $table->text('description')->nullable();
+                $table->integer('duration_years')->default(4); // e.g., 4-year program
+                $table->foreignId('department_id')
+                    ->constrained('departments')
+                    ->cascadeOnDelete();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

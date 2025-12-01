@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('semesters', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->string('name')->unique(); // e.g., "1st Semester"
-            $table->boolean('is_active')->default(false);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('semesters')) {
+            Schema::create('semesters', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->string('name')->unique(); // e.g., "1st Semester"
+                $table->boolean('is_active')->default(false);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

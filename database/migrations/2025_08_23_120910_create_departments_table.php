@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('departments', function (Blueprint $table) {
-            $table->softDeletes();
-            $table->id();
-            $table->string('department_code')->unique();
-            $table->string('department_name');
-            $table->string('office_location')->nullable();
-            $table->string('contact_email')->nullable();
-            $table->string('contact_number')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('departments')) {
+            Schema::create('departments', function (Blueprint $table) {
+                $table->softDeletes();
+                $table->id();
+                $table->string('department_code')->unique();
+                $table->string('department_name');
+                $table->string('office_location')->nullable();
+                $table->string('contact_email')->nullable();
+                $table->string('contact_number')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**
