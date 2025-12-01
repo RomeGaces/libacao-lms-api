@@ -135,6 +135,10 @@ Route::middleware(['auth:sanctum'])->get(
 Route::middleware(['auth:sanctum'])->post('/master-setup',
     [AdminController::class, 'dryRun']
 );
+
+Route::get('/debug-log', function () {
+    return nl2br(file_get_contents(storage_path('logs/laravel.log')));
+});
 // Route::middleware('api')->group(function () {
 //     Route::apiResource('instructors', InstructorsController::class);
 // });
