@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Professor;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProfessorController extends Controller
 {
@@ -20,10 +22,10 @@ class ProfessorController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('middle_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('specialization', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('middle_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('specialization', 'like', "%{$search}%");
             });
         }
 
@@ -74,7 +76,11 @@ class ProfessorController extends Controller
             'last_name' => 'required|string',
             'middle_name' => 'nullable|string',
             'gender' => 'required|string',
-            'email' => 'required|email|unique:professors,email,' . $id . ',professor_id',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('professors', 'email')->ignore($id),
+            ],
             'phone_number' => 'nullable|string',
             'hire_date' => 'nullable|date',
             'specialization' => 'nullable|string',

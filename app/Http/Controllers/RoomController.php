@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
@@ -55,7 +56,10 @@ class RoomController extends Controller
         $room = Room::findOrFail($id);
 
         $validated = $request->validate([
-            'room_number' => 'sometimes|string|max:255|unique:rooms,room_number,' . $id . ',room_id',
+            'room_number' =>  [
+                'sometimes',
+                Rule::unique('rooms', 'room_number')->ignore($id),
+            ],
             'building_name' => 'sometimes|string|max:255',
             'capacity' => 'sometimes|integer|min:0',
             'type' => 'sometimes|string|max:255',

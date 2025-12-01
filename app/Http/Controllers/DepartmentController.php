@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class DepartmentController extends Controller
 {
@@ -57,7 +58,11 @@ class DepartmentController extends Controller
         $department = Department::findOrFail($id);
 
         $validated = $request->validate([
-            'department_code' => 'required|string|unique:departments,department_code,' . $id . ',department_id',
+            
+            'department_code' => [
+                'required',
+                Rule::unique('departments', 'department_code')->ignore($id),
+            ],
             'department_name' => 'required|string',
             'office_location' => 'nullable|string',
             'contact_email' => 'nullable|email',
