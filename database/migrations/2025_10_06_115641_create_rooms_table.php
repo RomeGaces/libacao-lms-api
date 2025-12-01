@@ -12,12 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('rooms', function (Blueprint $table) {
-            $table->id('room_id');
+            $table->id();
             $table->string('room_number')->unique();
             $table->string('building_name');
             $table->integer('capacity')->default(0);
             $table->enum('type', ['Lecture', 'Laboratory', 'Online'])->default('Lecture');
             $table->timestamps();
+
+            $table->index('room_number');
+            $table->index('type');
         });
     }
 

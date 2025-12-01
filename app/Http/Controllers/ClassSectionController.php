@@ -6,64 +6,46 @@ use App\Models\ClassSection;
 use App\Models\ClassSchedule;
 use App\Models\Student;
 use App\Models\StudentSubjectAssignment;
+use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ClassSectionController extends Controller
 {
-    /**
-     * GET /api/sections
-     * List sections with search, filtering, pagination.
+    /* ============================================================
+     * SECTION MANAGEMENT
+     * ============================================================
      */
+
+    /** GET /api/sections */
     public function index(Request $request)
     {
         $query = ClassSection::with(['course:course_id,course_code,course_name']);
 
         if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('section_name', 'like', "%{$search}%")
-                    ->orWhere('academic_year', 'like', "%{$search}%")
-                    ->orWhereHas(
-                        'course',
-                        fn($c) =>
-                        $c->where('course_name', 'like', "%{$search}%")
-                            ->orWhere('course_code', 'like', "%{$search}%")
-                    );
-            });
+            $query->where('section_name', 'like', "%$search%");
         }
 
-        if ($courseId = $request->input('course_id')) {
-            $query->where('course_id', $courseId);
-        }
+        if ($request->course_id) $query->where('course_id', $request->course_id);
+        if ($request->semester) $query->where('semester', $request->semester);
+        if ($request->academic_year) $query->where('academic_year', $request->academic_year);
 
-        if ($academicYear = $request->input('academic_year')) {
-            $query->where('academic_year', $academicYear);
-        }
-
-        if ($semester = $request->input('semester')) {
-            $query->where('semester', $semester);
-        }
-
-        $perPage = (int)$request->input('per_page', 10);
-        $sections = $query->orderBy('section_name')->paginate($perPage);
-
-        return response()->json($sections);
+        return $query->orderBy('section_name')->paginate($request->per_page ?? 10);
     }
 
-    /**
-     * POST /api/sections
-     */
+    /** POST /api/sections */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'section_name' => 'required|string|max:255',
             'course_id' => 'required|exists:courses,course_id',
-            'academic_year' => 'required|string|max:20',
+            'academic_year' => 'required|string',
             'semester' => 'required|string|in:1st,2nd,Summer',
+            'year_level' => 'required|integer|min:1|max:5',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $section = ClassSection::create($validator->validated());
@@ -71,19 +53,13 @@ class ClassSectionController extends Controller
         return response()->json(['message' => 'Section created', 'data' => $section], 201);
     }
 
-    /**
-     * GET /api/sections/{id}
-     * Returns section + minimal relations (no heavy lists).
-     */
+    /** GET /api/sections/{id} */
     public function show($id)
     {
-        $section = ClassSection::with(['course:course_id,course_code,course_name'])->findOrFail($id);
-        return response()->json($section);
+        return ClassSection::with(['course'])->findOrFail($id);
     }
 
-    /**
-     * PUT /api/sections/{id}
-     */
+    /** PUT /api/sections/{id} */
     public function update(Request $request, $id)
     {
         $section = ClassSection::findOrFail($id);
@@ -91,12 +67,13 @@ class ClassSectionController extends Controller
         $validator = Validator::make($request->all(), [
             'section_name' => 'sometimes|string|max:255',
             'course_id' => 'sometimes|exists:courses,course_id',
-            'academic_year' => 'sometimes|string|max:20',
+            'academic_year' => 'sometimes|string',
             'semester' => 'sometimes|string|in:1st,2nd,Summer',
+            'year_level' => 'sometimes|integer|min:1|max:5',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $section->update($validator->validated());
@@ -104,21 +81,16 @@ class ClassSectionController extends Controller
         return response()->json(['message' => 'Section updated', 'data' => $section]);
     }
 
-    /**
-     * DELETE /api/sections/{id}
-     * Prevent deleting sections that have student assignments or schedules.
-     */
+    /** DELETE /api/sections/{id} */
     public function destroy($id)
     {
         $section = ClassSection::findOrFail($id);
 
-        $hasAssignments = StudentSubjectAssignment::where('class_section_id', $id)->exists();
-        $hasSchedules = ClassSchedule::where('class_section_id', $id)->exists();
-
-        if ($hasAssignments || $hasSchedules) {
-            return response()->json([
-                'message' => 'Cannot delete section with assigned students or schedules.'
-            ], 409);
+        if (
+            StudentSubjectAssignment::where('class_section_id', $id)->exists() ||
+            ClassSchedule::where('class_section_id', $id)->exists()
+        ) {
+            return response()->json(['message' => 'Cannot delete section with dependencies'], 409);
         }
 
         $section->delete();
@@ -126,135 +98,272 @@ class ClassSectionController extends Controller
         return response()->json(['message' => 'Section deleted']);
     }
 
-    /**
-     * GET /api/sections/{id}/schedules
-     * Return schedules for the section (flexible: pending/finalized allowed)
+    /* ============================================================
+     * SCHEDULE LISTING & VALIDATION
+     * ============================================================
      */
-    public function schedules($id)
+
+    /** GET /api/sections/{id}/available-students */
+    public function availableStudents($id)
     {
         $section = ClassSection::findOrFail($id);
 
-        $schedules = ClassSchedule::with([
-            'subject:subject_id,subject_code,subject_name',
-            'professor:professor_id,first_name,last_name',
-            'room:room_id,room_number,building_name'
-        ])
-            ->where('class_section_id', $id)
+        // students already assigned to this section
+        $assignedIds = StudentSubjectAssignment::where('class_section_id', $id)
+            ->pluck('student_id')
+            ->unique()
+            ->toArray();
+
+        // Standard subjects = students must take these
+        $standardSubjects = Subject::where([
+            ['course_id', $section->course_id],
+            ['year_level', $section->year_level],
+            ['semester', $section->semester]
+        ])->pluck('subject_id')->toArray();
+
+        // Students who belong to the same course but NOT yet assigned
+        // OR are retaking subjects matching this section
+        $eligible = Student::where('course_id', $section->course_id)
+            ->whereNotIn('student_id', $assignedIds)
             ->get();
 
-        // Map results safely
-        $formatted = $schedules->map(function ($s) {
-            return [
-                'class_schedule_id' => $s->class_schedule_id,
-                'subject_id' => $s->subject_id,
-                'subject' => $s->subject
-                    ? ($s->subject->subject_code . ' - ' . $s->subject->subject_name)
-                    : null,
-                'professor_id' => $s->professor_id,
-                'professor' => $s->professor
-                    ? ($s->professor->first_name . ' ' . $s->professor->last_name)
-                    : null,
-                'room_id' => $s->room_id,
-                'room' => $s->room
-                    ? ($s->room->room_number . ' - ' . $s->room->building_name)
-                    : null,
-                'day_of_week' => $s->day_of_week,
-                // format times safely (cast string or null)
-                'start_time' => $s->start_time ? date('H:i', strtotime($s->start_time)) : null,
-                'end_time' => $s->end_time ? date('H:i', strtotime($s->end_time)) : null,
-                'status' => $s->status,
-            ];
-        });
-
-        return response()->json($formatted->values());
+        return response()->json($eligible);
     }
-    /**
-     * GET /api/sections/{id}/students
-     * Return students assigned to this section (derived from student_subject_assignments).
-     * We return one entry per student (distinct), plus counts & assignment details.
+
+    /** GET /api/sections/{id}/schedules */
+    public function schedules($id)
+    {
+        return ClassSchedule::with(['subject', 'professor', 'room'])
+            ->where('class_section_id', $id)
+            ->get();
+    }
+
+    /** GET /api/sections/{id}/validate-schedules */
+    public function validateSectionSchedule($id)
+    {
+        $section = ClassSection::findOrFail($id);
+
+        $standardSubjects = Subject::where([
+            ['course_id', $section->course_id],
+            ['year_level', $section->year_level],
+            ['semester', $section->semester]
+        ])->get();
+
+        $errors = [];
+
+        foreach ($standardSubjects as $sub) {
+            $schedule = ClassSchedule::where('class_section_id', $id)
+                ->where('subject_id', $sub->subject_id)
+                ->first();
+
+            if (!$schedule) {
+                $errors[] = "{$sub->subject_code} has NO schedule assigned";
+                continue;
+            }
+
+            if (!$schedule->professor_id)
+                $errors[] = "{$sub->subject_code} has no professor";
+
+            if (!$schedule->room_id)
+                $errors[] = "{$sub->subject_code} has no room";
+
+            if (!$schedule->day_of_week || !$schedule->start_time || !$schedule->end_time)
+                $errors[] = "{$sub->subject_code} has incomplete time/day";
+        }
+
+        return $errors
+            ? response()->json(['status' => 'incomplete', 'errors' => $errors], 422)
+            : response()->json(['status' => 'ok']);
+    }
+
+    /* ============================================================
+     * DETECT SCHEDULE CONFLICTS
+     * ============================================================
      */
+
+    /** GET /api/sections/{id}/conflicts */
+    public function detectConflicts($id)
+    {
+        $schedules = ClassSchedule::where('class_section_id', $id)->get();
+        $conflicts = [];
+
+        foreach ($schedules as $a) {
+            foreach ($schedules as $b) {
+                if ($a->class_schedule_id >= $b->class_schedule_id) continue;
+                if ($a->day_of_week !== $b->day_of_week) continue;
+
+                $overlap = $a->start_time < $b->end_time && $b->start_time < $a->end_time;
+
+                if ($overlap) {
+                    if ($a->professor_id === $b->professor_id)
+                        $conflicts[] = "Professor conflict: {$a->subject_id} and {$b->subject_id}";
+
+                    if ($a->room_id === $b->room_id)
+                        $conflicts[] = "Room conflict: {$a->subject_id} and {$b->subject_id}";
+                }
+            }
+        }
+
+        return response()->json($conflicts);
+    }
+
+    /* ============================================================
+     * STUDENT LISTING (REGULAR/IRREGULAR)
+     * ============================================================
+     */
+
+    /** GET /api/sections/{id}/students */
     public function students($id)
     {
         $section = ClassSection::findOrFail($id);
 
-        // Get latest assignment per student per subject in this section (or all assignments)
-        $assignments = StudentSubjectAssignment::with(['student:student_id,student_number,first_name,middle_name,last_name,email', 'subject:subject_id,subject_code,subject_name'])
+        $standardSubjects = Subject::where([
+            ['course_id', $section->course_id],
+            ['year_level', $section->year_level],
+            ['semester', $section->semester]
+        ])->pluck('subject_id')->toArray();
+
+        $assignments = StudentSubjectAssignment::with(['student', 'subject'])
             ->where('class_section_id', $id)
-            ->get();
+            ->get()
+            ->groupBy('student_id');
 
-        // Aggregate by student to return a single student record with subjects array & counts
-        $grouped = $assignments->groupBy('student_id')->map(function ($group) {
+        $regular = [];
+        $irregular = [];
+
+        foreach ($assignments as $studentId => $group) {
             $student = $group->first()->student;
-            $subjects = $group->map(fn($a) => [
-                'assignment_id' => $a->assignment_id,
-                'subject_id' => $a->subject_id,
-                'subject_code' => $a->subject->subject_code ?? null,
-                'subject_name' => $a->subject->subject_name ?? null,
-                'status' => $a->status,
-                'grade' => $a->grade,
-            ])->values();
+            $studentSubjects = $group->pluck('subject_id')->toArray();
 
-            return [
-                'student_id' => $student->student_id,
-                'student_number' => $student->student_number,
-                'first_name' => $student->first_name,
-                'middle_name' => $student->middle_name,
-                'last_name' => $student->last_name,
-                'email' => $student->email,
-                'status' => $student->status,
-                'subjects' => $subjects,
-                'subjects_count' => count($subjects),
+            $isRegular = !array_diff($standardSubjects, $studentSubjects)
+                && !array_diff($studentSubjects, $standardSubjects);
+
+            $data = [
+                'student' => $student,
+                'subjects' => $group->values(),
             ];
-        })->values();
 
-        return response()->json($grouped);
+            $isRegular ? $regular[] = $data : $irregular[] = $data;
+        }
+
+        return response()->json([
+            'regular' => $regular,
+            'irregular' => $irregular,
+        ]);
     }
 
-    /**
-     * POST /api/sections/{id}/assign-student
-     * Assign a student to this section for a specific subject.
-     * body: { student_id, subject_id, status (optional), grade (optional) }
+    /* ============================================================
+     * ASSIGN STUDENTS
+     * ============================================================
      */
+
+    /** POST /api/sections/{id}/assign-student */
     public function assignStudent(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'student_id' => 'required|exists:students,student_id',
             'subject_id' => 'required|exists:subjects,subject_id',
-            'status' => 'nullable|in:enrolled,dropped,completed',
-            'grade' => 'nullable|string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
-        }
+        if ($validator->fails())
+            return response()->json(['errors' => $validator->errors()], 422);
 
-        $data = $validator->validated();
-        $data['class_section_id'] = $id;
+        $count = StudentSubjectAssignment::where('class_section_id', $id)
+            ->distinct('student_id')
+            ->count();
 
-        // Prevent duplicate exact assignment
-        $exists = StudentSubjectAssignment::where([
-            ['student_id', $data['student_id']],
-            ['subject_id', $data['subject_id']],
-            ['class_section_id', $id]
-        ])->exists();
+        if ($count >= 30)
+            return response()->json(['message' => 'Section is full (max 30)'], 409);
 
-        if ($exists) {
-            return response()->json(['message' => 'Student already assigned to that subject in this section'], 409);
-        }
-
-        $assignment = StudentSubjectAssignment::create($data);
-
-        return response()->json(['message' => 'Student assigned', 'data' => $assignment], 201);
+        return StudentSubjectAssignment::firstOrCreate([
+            'student_id' => $request->student_id,
+            'subject_id' => $request->subject_id,
+            'class_section_id' => $id,
+        ]);
     }
 
-    /**
-     * DELETE /api/assignments/{assignmentId}
-     */
+    /** POST /api/sections/{id}/auto-assign */
+    public function autoAssign($id)
+    {
+        $section = ClassSection::findOrFail($id);
+
+        $assigned = StudentSubjectAssignment::where('class_section_id', $id)
+            ->distinct('student_id')
+            ->count();
+
+        if ($assigned >= 30)
+            return response()->json(['message' => 'Section already full'], 409);
+
+        $limit = 30 - $assigned;
+
+        $students = Student::where('course_id', $section->course_id)
+            ->limit($limit)
+            ->get();
+
+        foreach ($students as $student) {
+            $this->assignAllStandardSubjectsToStudent($section, $student->student_id);
+        }
+
+        return response()->json(['message' => 'Students auto-assigned']);
+    }
+
+    private function assignAllStandardSubjectsToStudent($section, $studentId)
+    {
+        $standardSubjects = Subject::where([
+            ['course_id', $section->course_id],
+            ['year_level', $section->year_level],
+            ['semester', $section->semester]
+        ])->get();
+
+        foreach ($standardSubjects as $sub) {
+            StudentSubjectAssignment::firstOrCreate([
+                'student_id' => $studentId,
+                'subject_id' => $sub->subject_id,
+                'class_section_id' => $section->class_section_id,
+            ]);
+        }
+    }
+
+    /** DELETE /api/assignments/{id} */
     public function removeAssignment($assignmentId)
     {
-        $assignment = StudentSubjectAssignment::findOrFail($assignmentId);
-        $assignment->delete();
-
+        StudentSubjectAssignment::findOrFail($assignmentId)->delete();
         return response()->json(['message' => 'Assignment removed']);
+    }
+
+    /* ============================================================
+     * LOCK / UNLOCK SECTION
+     * ============================================================
+     */
+
+    /** POST /api/sections/{id}/lock */
+    public function lock($id)
+    {
+        $section = ClassSection::findOrFail($id);
+        $section->update(['locked' => true]);
+        return response()->json(['message' => 'Section locked']);
+    }
+
+    /** POST /api/sections/{id}/unlock */
+    public function unlock($id)
+    {
+        $section = ClassSection::findOrFail($id);
+        $section->update(['locked' => false]);
+        return response()->json(['message' => 'Section unlocked']);
+    }
+
+    /* ============================================================
+     * TIMETABLE EXPORT (Simple structure)
+     * ============================================================
+     */
+
+    /** GET /api/sections/{id}/timetable */
+    public function timetable($id)
+    {
+        return ClassSchedule::with(['subject', 'professor', 'room'])
+            ->where('class_section_id', $id)
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get();
     }
 }

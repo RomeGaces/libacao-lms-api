@@ -12,6 +12,7 @@ use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentSubjectAssignmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
 
 
 
@@ -65,17 +66,37 @@ Route::delete('/subjects/{id}', [SubjectController::class, 'destroy']);
 
 Route::middleware('auth:sanctum')->apiResource('professors', ProfessorController::class);
 Route::middleware('auth:sanctum')->apiResource('rooms', RoomController::class);
-Route::get('/sections', [ClassSectionController::class, 'index']);
-Route::post('/sections', [ClassSectionController::class, 'store']);
-Route::get('/sections/{id}', [ClassSectionController::class, 'show']);
-Route::put('/sections/{id}', [ClassSectionController::class, 'update']);
-Route::delete('/sections/{id}', [ClassSectionController::class, 'destroy']);
 
-// Section-related resources
-Route::get('/sections/{id}/schedules', [ClassSectionController::class, 'schedules']);
-Route::get('/sections/{id}/students', [ClassSectionController::class, 'students']);
-Route::post('/sections/{id}/assign-student', [ClassSectionController::class, 'assignStudent']);
-Route::delete('/assignments/{assignmentId}', [ClassSectionController::class, 'removeAssignment']);
+Route::middleware('auth:sanctum')->prefix('sections')->group(function () {
+
+    Route::get('/', [ClassSectionController::class, 'index']);
+    Route::post('/', [ClassSectionController::class, 'store']);
+    Route::get('/{id}', [ClassSectionController::class, 'show']);
+    Route::put('/{id}', [ClassSectionController::class, 'update']);
+    Route::delete('/{id}', [ClassSectionController::class, 'destroy']);
+
+    // schedules
+    Route::get('/{id}/schedules', [ClassSectionController::class, 'schedules']);
+    Route::get('/{id}/validate-schedules', [ClassSectionController::class, 'validateSectionSchedule']);
+    Route::get('/{id}/conflicts', [ClassSectionController::class, 'detectConflicts']);
+    //Route::get('/sections/{id}/available-students', [ClassSectionController::class, 'availableStudents']);
+    Route::get('/{id}/available-students', [ClassSectionController::class, 'availableStudents']);
+
+    // students
+    Route::get('/{id}/students', [ClassSectionController::class, 'students']);
+    Route::post('/{id}/assign-student', [ClassSectionController::class, 'assignStudent']);
+    Route::post('/{id}/auto-assign', [ClassSectionController::class, 'autoAssign']);
+
+    // lock/unlock
+    Route::post('/{id}/lock', [ClassSectionController::class, 'lock']);
+    Route::post('/{id}/unlock', [ClassSectionController::class, 'unlock']);
+
+    // timetable
+    Route::get('/{id}/timetable', [ClassSectionController::class, 'timetable']);
+});
+
+// remove assignment globally
+Route::middleware('auth:sanctum')->delete('/assignments/{assignmentId}', [ClassSectionController::class, 'removeAssignment']);
 
 Route::middleware('auth:sanctum')->get('schedules/conflicts', [ClassScheduleController::class, 'checkConflicts']);
 Route::middleware('auth:sanctum')->get('schedules/query', [ClassScheduleController::class, 'index']);
@@ -89,9 +110,31 @@ Route::middleware('auth:sanctum')->apiResource('schedules', ClassScheduleControl
 //     Route::post('schedules/check-conflict', [ClassScheduleController::class, 'checkConflict']);
 //     Route::get('schedules/timeslot/{day_of_week}/{start_hour}', [ClassScheduleController::class, 'getByTimeslot']);
 // });
-Route::middleware('auth:sanctum')->apiResource('students', StudentController::class);
-Route::middleware('auth:sanctum')->apiResource('student-subject-assignments', StudentSubjectAssignmentController::class);
+Route::middleware('auth:sanctum')->prefix('students')->group(function () {
 
+    // STATIC ROUTES FIRST
+    Route::get('/next-number', [StudentController::class, 'nextNumber']);
+    Route::get('/check-email', [StudentController::class, 'checkEmail']);
+
+    // RESOURCE ROUTES
+    Route::get('/', [StudentController::class, 'index']);
+    Route::post('/', [StudentController::class, 'store']);
+
+    // DYNAMIC ROUTES LAST
+    Route::get('/{id}/schedule', [StudentController::class, 'schedule']);
+    Route::get('/{id}/transcript', [StudentController::class, 'transcript']);
+    Route::put('/{id}', [StudentController::class, 'update']);
+    Route::delete('/{id}', [StudentController::class, 'destroy']);
+    Route::get('/{id}', [StudentController::class, 'show']);   // ALWAYS LAST
+});
+Route::middleware('auth:sanctum')->apiResource('student-subject-assignments', StudentSubjectAssignmentController::class);
+Route::middleware(['auth:sanctum'])->get(
+    '/dashboard/ay-summary',
+    [AdminController::class, 'summary']
+);
+Route::middleware(['auth:sanctum'])->post('/master-setup',
+    [AdminController::class, 'dryRun']
+);
 // Route::middleware('api')->group(function () {
 //     Route::apiResource('instructors', InstructorsController::class);
 // });

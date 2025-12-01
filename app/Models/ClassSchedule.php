@@ -10,7 +10,7 @@ class ClassSchedule extends Model
     use HasFactory;
     public $timestamps = true;
 
-    protected $primaryKey = 'class_schedule_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'subject_id',
@@ -20,28 +20,26 @@ class ClassSchedule extends Model
         'day_of_week',
         'start_time',
         'end_time',
-        'semester',
-        'academic_year',
         'status',
     ];
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class, 'subject_id');
+        return $this->belongsTo(Subject::class);
     }
 
     public function professor()
     {
-        return $this->belongsTo(Professor::class, 'professor_id');
+        return $this->belongsTo(Professor::class);
     }
 
     public function room()
     {
-        return $this->belongsTo(Room::class, 'room_id');
+        return $this->belongsTo(Room::class);
     }
 
     public function classSection()
     {
-        return $this->belongsTo(ClassSection::class, 'class_section_id');
+        return $this->belongsTo(ClassSection::class);
     }
 }

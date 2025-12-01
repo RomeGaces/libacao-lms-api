@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('professors', function (Blueprint $table) {
-            $table->id('professor_id');
+            $table->softDeletes();
+            $table->id();
             $table->string('first_name');
             $table->string('last_name');
             $table->string('middle_name')->nullable();
@@ -23,10 +24,13 @@ return new class extends Migration
             $table->string('specialization')->nullable();
             $table->string('status')->default('active');
             $table->foreignId('department_id')
-                  ->nullable()
-                  ->constrained('departments', 'department_id')
-                  ->nullOnDelete();
+                ->nullable()
+                ->constrained('departments')
+                ->nullOnDelete();
             $table->timestamps();
+
+            $table->index('department_id');
+            $table->index('email'); // faster lookup
         });
     }
 

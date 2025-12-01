@@ -9,7 +9,7 @@ class Department extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'department_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'department_code',
@@ -22,16 +22,17 @@ class Department extends Model
     // Relationships
     public function subjects()
     {
-        return $this->hasMany(Subject::class, 'department_id', 'department_id');
+        return $this->hasMany(Subject::class, 'department_id', 'id');
     }
 
     public function courses()
     {
-        return $this->hasMany(Course::class, 'department_id', 'department_id');
+        return $this->hasMany(Course::class, 'department_id', 'id');
     }
 
     public function professors()
     {
-        return $this->hasMany(Professor::class, 'department_id', 'department_id');
+        return $this->hasMany(Professor::class, 'department_id', 'id');
     }
+    
 }

@@ -8,14 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 class ClassSection extends Model
 {
     use HasFactory;
-    public $timestamps = true;  
-    protected $primaryKey = 'class_section_id';
+    public $timestamps = true;
+    protected $primaryKey = 'id';
 
     protected $fillable = [
-        'section_name', 
-        'academic_year', 
-        'semester',
+        'section_name',
         'course_id',
+        'year_level',
+        'school_year_id',
+        'semester_id',
+        'capacity',
     ];
 
     public function course()
@@ -25,11 +27,16 @@ class ClassSection extends Model
 
     public function studentSubjectAssignments()
     {
-        return $this->hasMany(StudentSubjectAssignment::class, 'class_section_id', 'class_section_id');
+        return $this->hasMany(StudentSubjectAssignment::class, 'class_section_id', 'id');
     }
 
     public function classSchedules()
     {
-        return $this->hasMany(ClassSchedule::class, 'class_section_id', 'class_section_id');
+        return $this->hasMany(ClassSchedule::class, 'class_section_id', 'id');
+    }
+
+    public function schoolYear()
+    {
+        return $this->belongsTo(SchoolYear::class, 'school_year_id');
     }
 }

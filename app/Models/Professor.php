@@ -9,7 +9,7 @@ class Professor extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'professor_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'first_name',
@@ -27,11 +27,11 @@ class Professor extends Model
     // 🔗 Relationships
     public function department()
     {
-        return $this->belongsTo(Department::class, 'department_id', 'department_id');
+        return $this->belongsTo(Department::class, 'department_id', 'id');
     }
 
     public function classSchedules()
     {
-        return $this->hasMany(ClassSchedule::class, 'professor_id', 'professor_id');
+        return $this->hasMany(ClassSchedule::class, 'professor_id', 'id');
     }
 }

@@ -13,10 +13,9 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
-        'email',      // make sure this is fillable
         'name',
         'email',
-        'employee_id',
+        'professor_id',
         'password',
         'is_admin',
     ];
@@ -43,13 +42,8 @@ class User extends Authenticatable
         return 'email';
     }
 
-    public function professors()
+    public function professor()
     {
-        return $this->belongsTo(Professor::class);
-    }
-
-    public function department()
-    {
-        return $this->employee->department();
+        return $this->belongsTo(Professor::class, 'professor_id', 'id');
     }
 }

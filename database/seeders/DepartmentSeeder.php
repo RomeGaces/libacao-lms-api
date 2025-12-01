@@ -12,15 +12,25 @@ class DepartmentSeeder extends Seeder
      */
     public function run(): void
     {
-        $departments = [
-            ['department_name' => 'Department of Computer Education', 'department_code' => 'DCE'],
-            ['department_name' => 'Department of Accounting Studies', 'department_code' => 'DAS'],
-            ['department_name' => 'Department of Teacher Education', 'department_code' => 'DTE'],
-            ['department_name' => 'College of Health Sciences', 'department_code' => 'DHS'],
-        ];
-
-        DB::table('departments')->insert($departments);
-
-        $this->command->info('✅ DepartmentsSeeder: inserted ' . count($departments) . ' departments.');
+        DB::table('departments')->insert([
+            [
+                'department_code' => 'DCE',
+                'department_name' => 'Department of Computer Education',
+                'office_location' => 'IT Building 2F',
+                'contact_email' => 'dce@school.edu.ph',
+                'contact_number' => '+63 2 8888 0001',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'department_code' => 'DA',
+                'department_name' => 'Department of Accountancy',
+                'office_location' => 'Business Building 1F',
+                'contact_email' => 'da@school.edu.ph',
+                'contact_number' => '+63 2 8888 0002',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
     }
 }

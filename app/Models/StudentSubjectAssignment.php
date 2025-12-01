@@ -29,9 +29,9 @@ class StudentSubjectAssignment extends Model
     {
         return $this->belongsTo(Subject::class, 'subject_id');
     }
-    
+
     public function section()
     {
-        return $this->belongsTo(ClassSection::class, 'class_section_id', 'class_section_id');
+        return $this->belongsTo(ClassSection::class, 'class_section_id', 'id');
     }
 }

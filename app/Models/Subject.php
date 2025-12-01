@@ -9,7 +9,7 @@ class Subject extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'subject_id';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'subject_code',
@@ -18,18 +18,22 @@ class Subject extends Model
         'semester',
         'year_level',
         'course_id',
+        'type',
+        'hours_per_week',
+        'description',
+        'subject_prerequisite_id',
     ];
 
     // 🔗 Relationships
 
     public function classSchedules()
     {
-        return $this->hasMany(ClassSchedule::class, 'subject_id', 'subject_id');
+        return $this->hasMany(ClassSchedule::class, 'subject_id', 'id');
     }
 
     public function studentAssignments()
     {
-        return $this->hasMany(StudentSubjectAssignment::class, 'subject_id', 'subject_id');
+        return $this->hasMany(StudentSubjectAssignment::class, 'subject_id', 'id');
     }
 
     public function course()
@@ -37,4 +41,3 @@ class Subject extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 }
-

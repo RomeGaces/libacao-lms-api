@@ -9,21 +9,29 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('draft_schedules', function (Blueprint $table) {
-            $table->id('draft_id');
+            $table->softDeletes();
+            $table->id();
 
-            $table->foreignId('subject_id')->constrained('subjects', 'subject_id')->cascadeOnDelete();
-            $table->foreignId('professor_id')->nullable()->constrained('professors','professor_id')->nullOnDelete();
-            $table->foreignId('room_id')->nullable()->constrained('rooms', 'room_id')->nullOnDelete();
-            $table->foreignId('section_id')->nullable()->constrained('class_sections', 'class_section_id')->nullOnDelete();
+            $table->foreignId('subject_id')->constrained('subjects')->cascadeOnDelete();
+            $table->foreignId('professor_id')->nullable()->constrained('professors')->nullOnDelete();
+            $table->foreignId('room_id')->nullable()->constrained('rooms')->nullOnDelete();
+            $table->foreignId('class_section_id')
+                ->nullable()
+                ->constrained('class_sections', 'id')
+                ->nullOnDelete();
 
             $table->string('day_of_week', 10);
             $table->time('start_time');
             $table->time('end_time');
 
-            $table->enum('status', ['pending', 'reviewed', 'approved', 'discarded'])->default('pending');
-            $table->enum('generated_by', ['system', 'user'])->default('system');
-            $table->text('notes')->nullable(); 
+            $table->enum('status', ['Pending', 'Reviewed', 'Approved', 'Discarded'])->default('Pending');
+            $table->enum('generated_by', ['System', 'User'])->default('system');
+            $table->text('notes')->nullable();
             $table->timestamps();
+
+            $table->index(['section_id', 'day_of_week', 'start_time'], 'idx_draft_section_time');
+            $table->index(['professor_id', 'day_of_week', 'start_time'], 'idx_draft_prof_time');
+            $table->index(['room_id', 'day_of_week', 'start_time'], 'idx_draft_room_time');
         });
     }
 

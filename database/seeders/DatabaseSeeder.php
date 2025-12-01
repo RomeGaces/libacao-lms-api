@@ -13,17 +13,25 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Fixed data
         $this->call([
+            SchoolYearSemesterSeeder::class,
             DepartmentSeeder::class,
-            ProfessorsSeeder::class,
-            UserSeeder::class,
             CoursesSeeder::class,
             RoomsSeeder::class,
+            ProfessorsSeeder::class,
             SubjectsSeeder::class,
-            SectionsSeeder::class,
+            UserSeeder::class,
+        ]);
+
+        // dynamic/factory-driven
+        $this->call([
+            // ensure you have at least one school_year and semester seeded manually or via migration seeder
+            ClassSectionsSeeder::class,
+            SectionSubjectsSeeder::class,
             StudentSeeder::class,
-            StudentSubjectAssignmentSeeder::class,
-            ClassScheduleSeeder::class
+            ClassSchedulesSeeder::class,
+            StudentSubjectAssignmentsSeeder::class,
         ]);
     }
 }
