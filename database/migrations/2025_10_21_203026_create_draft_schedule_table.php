@@ -30,7 +30,7 @@ return new class extends Migration
                 $table->text('notes')->nullable();
                 $table->timestamps();
 
-                $table->index(['section_id', 'day_of_week', 'start_time'], 'idx_draft_section_time');
+                $table->index(['class_section_id', 'day_of_week', 'start_time'], 'idx_draft_section_time');
                 $table->index(['professor_id', 'day_of_week', 'start_time'], 'idx_draft_prof_time');
                 $table->index(['room_id', 'day_of_week', 'start_time'], 'idx_draft_room_time');
             });
