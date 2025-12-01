@@ -62,7 +62,7 @@
   
   <script setup>
   import { ref, computed, onMounted } from "vue";
-  import Button from "@/Components/Common/Button.vue";
+  import Button from "@/components/Common/Button.vue";
   import employeeService from "@/Services/employeeService";
   import PDSFormModal from '@/Components/PDS/PDSFormModal.vue';
   import PDSFormViewModal from '@/Components/PDS/View/PDSFormViewModal.vue';
