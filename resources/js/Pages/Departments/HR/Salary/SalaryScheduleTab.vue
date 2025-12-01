@@ -54,7 +54,7 @@
     </section>
 </template>
 <script setup>
-    import Button from "@/Components/Common/Button.vue";
-    import Input from "@/Components/Common/Input.vue";
-    import Tooltip from "@/Components/Common/Tooltip.vue";
+    import Button from "@/components/Common/Button.vue";
+    import Input from "@/components/Common/Input.vue";
+    import Tooltip from "@/components/Common/Tooltip.vue";
 </script>
