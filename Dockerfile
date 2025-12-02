@@ -1,6 +1,6 @@
 FROM dunglas/frankenphp:1-php8.3
 
-# Install system dependencies + Node.js
+# Install dependencies + Node.js
 RUN apt-get update && apt-get install -y \
     git curl zip unzip \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
@@ -12,7 +12,7 @@ RUN curl -sS https://getcomposer.org/installer \
 
 WORKDIR /app
 
-# Copy application files
+# Copy app
 COPY . .
 
 # Install PHP dependencies
@@ -21,11 +21,10 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts
 # Discover Laravel packages
 RUN php artisan package:discover
 
-# Build Vue app
+# Build Vue
 RUN npm install && npm run build
 
-# Expose port used by FrankenPHP
 EXPOSE 8080
 
-# Run Laravel with FrankenPHP (no Octane)
-CMD ["frankenphp", "run", "--config=/app/frankenphp.php", "--port=${PORT}", "--worker"]
+# Correct FrankenPHP command
+CMD ["frankenphp", "run", "--config=/app/frankenphp.php", "--listen=0.0.0.0:${PORT}", "--worker"]
