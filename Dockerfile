@@ -17,7 +17,7 @@ COPY . .
 
 # Install PHP dependencies WITHOUT running composer scripts
 RUN composer install --no-dev --optimize-autoloader --no-scripts
-
+RUN php artisan octane:install --server=frankenphp --yes
 # Discover packages and optimize Laravel
 RUN php artisan package:discover \
  && php artisan config:cache \
@@ -29,4 +29,4 @@ RUN npm install && npm run build
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan frankenphp:octane --host=0.0.0.0 --port=${PORT}"]
+CMD ["sh", "-c", "php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=${PORT}"]
