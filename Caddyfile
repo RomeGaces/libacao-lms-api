@@ -1,0 +1,15 @@
+{
+    auto_https off
+}
+
+:{$PORT}
+
+route {
+    php_server
+}
+
+handle_path / {
+    root * /app/public
+    file_server
+    php_server
+}

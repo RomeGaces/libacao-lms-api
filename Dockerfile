@@ -27,4 +27,4 @@ RUN npm install && npm run build
 EXPOSE 8080
 
 # Correct FrankenPHP command
-CMD ["frankenphp", "run", "--config=/app/frankenphp.php", "--listen=0.0.0.0:${PORT}", "--worker"]
+CMD ["frankenphp", "run", "--config=/app/frankenphp.php"]
