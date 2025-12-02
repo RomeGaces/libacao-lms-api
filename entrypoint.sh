@@ -16,4 +16,4 @@ php artisan config:cache || true
 php artisan route:cache || true
 
 # Start FrankenPHP via Caddyfile
-exec frankenphp run --adapter=caddyfile --config=/app/CaddyFile
+exec frankenphp run --adapter=caddyfile --config=/app/Caddyfile
