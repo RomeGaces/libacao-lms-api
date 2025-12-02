@@ -1,7 +1,7 @@
 <?php
 
-use Symfony\Component\Runtime\RuntimeInterface;
+use Symfony\Component\Runtime\FrankenPhp\FrankenPhpRuntime;
 
-return function (array $context): RuntimeInterface {
-    return new \Symfony\Component\Runtime\FrankenPhp\FrankenPhpRuntime($context);
-};
+require_once __DIR__ . '/vendor/autoload.php';
+
+return new FrankenPhpRuntime();
