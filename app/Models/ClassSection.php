@@ -20,6 +20,16 @@ class ClassSection extends Model
         'capacity',
     ];
 
+    public function students()
+    {
+        return $this->belongsToMany(
+            Student::class,
+            'student_subject_assignments',
+            'class_section_id',
+            'student_id'
+        )->distinct();
+    }
+
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id', 'id');

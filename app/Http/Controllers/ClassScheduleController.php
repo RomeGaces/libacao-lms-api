@@ -359,32 +359,106 @@ class ClassScheduleController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $data = $validator->validated();
 
-        // Room capacity conflict
-        $capacityConflict = false;
+        $day = $data['day_of_week'];
+        $start = $data['start_time'];
+        $end = $data['end_time'];
 
+        /* --------------------------------------------------------
+     | ROOM CONFLICT
+     | Another class is using this room at the same time.
+     -------------------------------------------------------- */
+        $roomConflict = false;
+        if (!empty($data['room_id'])) {
+            $roomConflict = ClassSchedule::where('room_id', $data['room_id'])
+                ->where('day_of_week', $day)
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('start_time', [$start, $end])
+                        ->orWhereBetween('end_time', [$start, $end])
+                        ->orWhere(function ($q2) use ($start, $end) {
+                            $q2->where('start_time', '<=', $start)
+                                ->where('end_time', '>=', $end);
+                        });
+                })
+                ->exists();
+        }
+
+        /* --------------------------------------------------------
+     | PROFESSOR CONFLICT
+     | Professor has another class at the same time.
+     -------------------------------------------------------- */
+        $professorConflict = false;
+        if (!empty($data['professor_id'])) {
+            $professorConflict = ClassSchedule::where('professor_id', $data['professor_id'])
+                ->where('day_of_week', $day)
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('start_time', [$start, $end])
+                        ->orWhereBetween('end_time', [$start, $end])
+                        ->orWhere(function ($q2) use ($start, $end) {
+                            $q2->where('start_time', '<=', $start)
+                                ->where('end_time', '>=', $end);
+                        });
+                })
+                ->exists();
+        }
+
+        /* --------------------------------------------------------
+     | CLASS CONFLICT
+     | The class section already has a subject scheduled.
+     -------------------------------------------------------- */
+        $classConflict = false;
+        if (!empty($data['class_section_id'])) {
+            $classConflict = ClassSchedule::where('class_section_id', $data['class_section_id'])
+                ->where('day_of_week', $day)
+                ->where(function ($q) use ($start, $end) {
+                    $q->whereBetween('start_time', [$start, $end])
+                        ->orWhereBetween('end_time', [$start, $end])
+                        ->orWhere(function ($q2) use ($start, $end) {
+                            $q2->where('start_time', '<=', $start)
+                                ->where('end_time', '>=', $end);
+                        });
+                })
+                ->exists();
+        }
+
+        /* --------------------------------------------------------
+     | ROOM CAPACITY CONFLICT
+     -------------------------------------------------------- */
+        $roomCapacityConflict = false;
         if (!empty($data['room_id']) && !empty($data['class_section_id'])) {
-            $room = Room::find($data['room_id']);
-            $section = ClassSection::withCount('studentSubjectAssignments')
-                ->find($data['class_section_id']);
 
-            if ($room && $section) {
-                $capacityConflict = $section->student_subject_assignments_count > $room->capacity;
+            $room = Room::find($data['room_id']);
+            $studentCount = StudentSubjectAssignment::where('class_section_id', $data['class_section_id'])
+                ->distinct('student_id')
+                ->count('student_id');
+
+            // Only check if both exist
+            if ($room && $studentCount) {
+                $roomCapacityConflict = $studentCount > $room->capacity;
             }
         }
 
-        $timeConflict = $this->hasConflict($data);
+        /* --------------------------------------------------------
+     | ANY CONFLICT?
+     -------------------------------------------------------- */
+        $anyConflict = $roomConflict || $professorConflict || $classConflict || $roomCapacityConflict;
 
         return response()->json([
-            'conflict' => $timeConflict || $capacityConflict,
-            'time_conflict' => $timeConflict,
-            'capacity_conflict' => $capacityConflict
+            'conflict' => $anyConflict,
+            'room_conflict' => $roomConflict,
+            'professor_conflict' => $professorConflict,
+            'class_conflict' => $classConflict,
+            'room_capacity_conflict' => $roomCapacityConflict,
         ]);
     }
+
 
     /**
      * GET /api/schedules/timeslot/{day_of_week}/{start_hour}
