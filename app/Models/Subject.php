@@ -15,7 +15,7 @@ class Subject extends Model
         'subject_code',
         'subject_name',
         'units',
-        'semester',
+        'semester_id',
         'year_level',
         'course_id',
         'type',
@@ -23,7 +23,7 @@ class Subject extends Model
         'description',
         'subject_prerequisite_id',
     ];
-
+    
     // 🔗 Relationships
 
     public function classSchedules()

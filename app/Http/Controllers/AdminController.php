@@ -14,6 +14,7 @@ use App\Models\Subject;
 use App\Models\Professor;
 use App\Models\Room;
 use App\Models\ClassSchedule;
+use App\Models\StudentSubjectAssignment;
 
 class AdminController extends Controller
 {
@@ -151,7 +152,7 @@ class AdminController extends Controller
         $getSubjects = function ($courseId, $yearLevel, $semesterId) {
             return Subject::where('course_id', $courseId)
                 ->where('year_level', $yearLevel)
-                ->where('semester', $semesterId)
+                ->where('semester_id', $semesterId)
                 ->get();
         };
 
@@ -240,6 +241,7 @@ class AdminController extends Controller
             }
         }
 
+
         // Now attempt to schedule sessions (dry-run uses the solver to propose an assignment)
         $solverResult = $this->solveScheduling($preview['sessions'], $timeslots, [
             'fallback_online' => $fallbackOnline,
@@ -286,6 +288,10 @@ class AdminController extends Controller
                 $newSY->update(['is_active' => 1]);
             }
 
+            // ACTIVATE NEW SEMESTER
+            Semester::query()->update(['is_active' => false]);
+            Semester::where('id', $semesterId)->update(['is_active' => true]);
+
             // create sections and persist mapping of section name => model
             $sectionMap = []; // section_name => model
             foreach ($preview['sections'] as $s) {
@@ -308,26 +314,52 @@ class AdminController extends Controller
                 Student::where('school_year_id', $currentSY->id)->update(['school_year_id' => $newSY->id]);
             }
 
-            // assign students to sections evenly
-            // group sections by (course_id, year_level)
-            $sectionsByGroup = [];
-            foreach ($sectionMap as $sname => $model) {
-                $key = $model->course_id . '|' . $model->year_level;
-                $sectionsByGroup[$key][] = $model;
-            }
-            foreach ($sectionsByGroup as $key => $sections) {
-                [$courseId, $yr] = explode('|', $key);
-                $students = Student::where('course_id', $courseId)
-                    ->where('year_level', $yr)
+            // // assign students to sections evenly
+            // // group sections by (course_id, year_level)
+            // $sectionsByGroup = [];
+            // foreach ($sectionMap as $sname => $model) {
+            //     $key = $model->course_id . '|' . $model->year_level;
+            //     $sectionsByGroup[$key][] = $model;
+            // }
+            // foreach ($sectionsByGroup as $key => $sections) {
+            //     [$courseId, $yr] = explode('|', $key);
+            //     $students = Student::where('course_id', $courseId)
+            //         ->where('year_level', $yr)
+            //         ->where('school_year_id', $newSY->id)
+            //         ->get();
+            //     $idx = 0;
+            //     foreach ($students as $stu) {
+            //         $target = $sections[$idx % count($sections)];
+            //         // assumes student has class_section_id column
+            //         $stu->class_section_id = $target->id;
+            //         $stu->save();
+            //         $idx++;
+            //     }
+            // }
+
+            // Assign students to subjects inside their correct class section
+            foreach ($preview['sections'] as $sec) {
+
+                // Find the DB model for this section
+                $sectionModel = $sectionMap[$sec['name']];
+
+                // Get all students who belong to this course + year level
+                $students = Student::where('course_id', $sec['course_id'])
+                    ->where('year_level', $sec['year_level'])
                     ->where('school_year_id', $newSY->id)
                     ->get();
-                $idx = 0;
-                foreach ($students as $stu) {
-                    $target = $sections[$idx % count($sections)];
-                    // assumes student has class_section_id column
-                    $stu->class_section_id = $target->id;
-                    $stu->save();
-                    $idx++;
+
+                foreach ($students as $student) {
+
+                    foreach ($sec['subjects'] as $subjectEntry) {
+
+                        StudentSubjectAssignment::create([
+                            'student_id'        => $student->id,
+                            'subject_id'        => $subjectEntry['subject_id'],
+                            'class_section_id'  => $sectionModel->id,
+                            'status'            => 'enrolled'
+                        ]);
+                    }
                 }
             }
 
@@ -342,7 +374,7 @@ class AdminController extends Controller
                     'subject_id' => $assign['subject_id'],
                     'professor_id' => $assign['professor_id'] ?? null,
                     'room_id' => $assign['room_id'] ?? null,
-                    'day' => $assign['timeslot']['day'],
+                    'day_of_week' => $assign['timeslot']['day'],
                     'start_time' => $assign['timeslot']['start'],
                     'end_time' => $assign['timeslot']['end'],
                     'is_online' => $assign['is_online'] ?? false,
@@ -448,6 +480,10 @@ class AdminController extends Controller
             $sess = $sessions[$sessionIndex];
             $cands = $sessionCandidates[$sessionIndex];
 
+            $subjectLookup = Subject::all()->keyBy('id');
+            $professorLookup = Professor::all()->keyBy('id');
+            $roomLookup = Room::all()->keyBy('id');
+
             // try each timeslot
             for ($t = 0; $t < $timeslotCount; $t++) {
                 // ensure professor and room available at timeslot t
@@ -468,12 +504,24 @@ class AdminController extends Controller
                         if ($roomId !== null && isset($roomBooked[$t][$roomId])) continue;
 
                         // assign
+                        $subject = $subjectLookup[$sess['subject_id']] ?? null;
+                        $professor = $professorLookup[$pid] ?? null;
+                        $room = $roomId ? ($roomLookup[$roomId] ?? null) : null;
+
                         $assignment[$sessionIndex] = [
                             'session_index' => $sessionIndex,
                             'section_name' => $sess['section_name'],
+
                             'subject_id' => $sess['subject_id'],
+                            'subject_code' => $subject->subject_code ?? null,
+                            'subject_title' => $subject->subject_name ?? null,
+
                             'professor_id' => $pid,
+                            'professor_name' => $professor ? ($professor->last_name . ', ' . $professor->first_name) : null,
+
                             'room_id' => $roomId,
+                            'room_name' => $room ? ($room->building_name . ' - ' . $room->room_number) :  'Online',
+
                             'timeslot' => $timeslots[$t],
                             'is_online' => $roomId === null
                         ];
@@ -553,11 +601,21 @@ class AdminController extends Controller
     protected function getDefaultTimeslots()
     {
         return [
-            ['day' => 'Mon-Wed-Fri', 'start' => '08:00:00', 'end' => '09:00:00'],
-            ['day' => 'Mon-Wed-Fri', 'start' => '09:00:00', 'end' => '10:00:00'],
-            ['day' => 'Mon-Wed-Fri', 'start' => '10:00:00', 'end' => '11:00:00'],
-            ['day' => 'Tue-Thu', 'start' => '13:00:00', 'end' => '15:00:00'],
-            ['day' => 'Tue-Thu', 'start' => '15:00:00', 'end' => '17:00:00'],
+            // MWF
+            ['day' => 'Monday', 'start' => '08:00:00', 'end' => '09:00:00'],
+            ['day' => 'Wednesday', 'start' => '08:00:00', 'end' => '09:00:00'],
+            ['day' => 'Friday',  'start' => '08:00:00', 'end' => '09:00:00'],
+
+            ['day' => 'Monday', 'start' => '09:00:00', 'end' => '10:00:00'],
+            ['day' => 'Wednesday', 'start' => '09:00:00', 'end' => '10:00:00'],
+            ['day' => 'Friday', 'start' => '09:00:00', 'end' => '10:00:00'],
+
+            // TTh
+            ['day' => 'Tuesday', 'start' => '13:00:00', 'end' => '15:00:00'],
+            ['day' => 'Thursday', 'start' => '13:00:00', 'end' => '15:00:00'],
+
+            ['day' => 'Tuesday', 'start' => '15:00:00', 'end' => '17:00:00'],
+            ['day' => 'Thursday', 'start' => '15:00:00', 'end' => '17:00:00'],
         ];
     }
 

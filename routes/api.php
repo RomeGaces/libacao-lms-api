@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->prefix('students')->group(function () {
 
 });
 Route::middleware('auth:sanctum')->apiResource('student-subject-assignments', StudentSubjectAssignmentController::class);
+
 Route::middleware(['auth:sanctum'])->get(
     '/dashboard/ay-summary',
     [AdminController::class, 'summary']
