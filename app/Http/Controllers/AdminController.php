@@ -97,154 +97,155 @@ class AdminController extends Controller
 
     public function dryRun(Request $request)
     {
+        // =======================
+        // 1. VALIDATE INPUT
+        // =======================
         $validated = $request->validate([
             'academic_year_name' => 'required|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
-            'semester_id' => 'required|integer',
-            'dry_run' => 'required|boolean',
-            'section_capacity' => 'nullable|integer',
+            'start_date'         => 'required|date',
+            'end_date'           => 'required|date',
+            'semester_id'        => 'required|integer',
+            'dry_run'            => 'required|boolean',
+            'section_capacity'   => 'nullable|integer',
             'advance_academic_year' => 'nullable|boolean',
-            // scheduling options
-            'fallback_online' => 'nullable|boolean',
-            'prof_default_max_load' => 'nullable|integer'
+            'fallback_online'       => 'nullable|boolean',
+            'prof_default_max_load' => 'nullable|integer',
         ]);
 
-        $sectionCapacity = $validated['section_capacity'] ?? config('academic.default_section_capacity', 35);
-        $dryRun = (bool) $validated['dry_run'];
-        $advanceAY = (bool) ($validated['advance_academic_year'] ?? false);
-        $semesterId = $validated['semester_id'];
-        $fallbackOnline = (bool) ($validated['fallback_online'] ?? true);
+        $dryRun            = (bool) $validated['dry_run'];
+        $sectionCapacity   = $validated['section_capacity'] ?? config('academic.default_section_capacity', 35);
+        $advanceAY         = (bool) ($validated['advance_academic_year'] ?? false);
+        $semesterId        = $validated['semester_id'];
+        $fallbackOnline    = (bool) ($validated['fallback_online'] ?? true);
         $profDefaultMaxLoad = (int) ($validated['prof_default_max_load'] ?? config('academic.prof_default_max_load', 10));
 
-        // parse AY name
+        // Parse academic year "2025-2026"
         [$start, $end] = array_map('trim', explode('-', $validated['academic_year_name']));
-        $startYear = intval($start);
-        $endYear = intval($end);
+        $startYear = (int) $start;
+        $endYear   = (int) $end;
 
-        // find current active school year (if any)
+        // Get currently active school year
         $currentSY = SchoolYear::where('is_active', 1)->first();
 
-        // fetch student counts for upcoming distribution
+        // =======================
+        // 2. LOAD ALL STUDENTS (NO FILTERING!)
+        // =======================
+        // Always include ALL students. This ensures correct preview even during first setup.
         $studentCounts = Student::select('course_id', 'year_level', DB::raw('COUNT(*) as total'))
-            ->when($currentSY, function ($q) use ($currentSY) {
-                $q->where('school_year_id', $currentSY->id);
-            })
             ->groupBy('course_id', 'year_level')
             ->get();
 
-        // PREP: timeslots
-        $timeslots = $this->getDefaultTimeslots(); // array of timeslot objects with ids
+        // =======================
+        // 3. PREP TIMESLOTS + PREVIEW OBJECT
+        // =======================
+        $timeslots = $this->getDefaultTimeslots();
 
-        // Build preview structure and session list
         $preview = [
             'sections' => [],
-            'sessions' => [],    // flat list of sessions to be scheduled
+            'sessions' => [],
             'summary' => [
-                'total_courses' => Course::count(),
+                'total_courses'        => Course::count(),
                 'total_students_counted' => $studentCounts->sum('total'),
-                'section_capacity' => $sectionCapacity,
-                'timeslots_count' => count($timeslots)
+                'section_capacity'     => $sectionCapacity,
+                'timeslots_count'      => count($timeslots),
             ],
         ];
 
         // Helper closures
-        $getSubjects = function ($courseId, $yearLevel, $semesterId) {
-            return Subject::where('course_id', $courseId)
-                ->where('year_level', $yearLevel)
-                ->where('semester_id', $semesterId)
-                ->get();
-        };
+        $getSubjects = fn($courseId, $year, $semId) =>
+        Subject::where('course_id', $courseId)
+            ->where('year_level', $year)
+            ->where('semester_id', $semId)
+            ->get();
 
-        $getProfessorsForCourse = function ($course) {
-            if (!$course) return collect();
-            return Professor::where('department_id', $course->department_id)->get();
-        };
+        $getProfessorsForCourse = fn($course) =>
+        Professor::where('department_id', $course->department_id)->get();
 
-        $findRooms = function ($type, $requiredCapacity) {
-            return Room::where('type', $type)
-                ->where('capacity', '>=', $requiredCapacity)
-                ->orderBy('capacity', 'asc')
-                ->get();
-        };
+        $findRooms = fn($type, $count) =>
+        Room::where('type', $type)
+            ->where('capacity', '>=', $count)
+            ->orderBy('capacity', 'asc')
+            ->get();
 
-        // Build sections & sessions preview
+        // =======================
+        // 4. BUILD SECTION PREVIEW + SESSION LIST
+        // =======================
         foreach ($studentCounts as $row) {
+
             $course = Course::find($row->course_id);
             if (!$course) continue;
 
             $effectiveYear = $row->year_level + ($advanceAY ? 1 : 0);
             if ($effectiveYear < 1) continue;
 
+            // Compute number of class sections needed
             $requiredSections = max(1, (int) ceil($row->total / $sectionCapacity));
 
-            for ($s = 0; $s < $requiredSections; $s++) {
-                $sectionName = $this->generateSectionName($course, $effectiveYear, $s);
+            for ($i = 0; $i < $requiredSections; $i++) {
 
+                $sectionName = $this->generateSectionName($course, $effectiveYear, $i);
                 $subjects = $getSubjects($course->id, $effectiveYear, $semesterId);
 
-                // build subject entries and candidate professors & rooms
-                $professorsForCourse = $getProfessorsForCourse($course);
+                // Build subject entries
+                $professors = $getProfessorsForCourse($course);
                 $subjectEntries = [];
+
                 foreach ($subjects as $sub) {
-                    $candidateProfs = $professorsForCourse->map(function ($p) {
-                        return [
-                            'id' => $p->id,
-                            'name' => $p->name,
-                            'max_weekly_load' => $p->max_weekly_load ?? null // may be null, default applied later
-                        ];
-                    })->values()->all();
 
-                    $rooms = $findRooms($sub->room_type ?? 'Lecture', $sectionCapacity)->map(function ($r) {
-                        return ['id' => $r->id, 'name' => $r->name, 'capacity' => $r->capacity, 'type' => $r->type];
-                    })->values()->all();
+                    $candidateProfs = $professors->map(fn($p) => [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'max_weekly_load' => $p->max_weekly_load,
+                    ])->values()->all();
 
-                    // keep subject session template
+                    $candidateRooms = $findRooms($sub->room_type ?? 'Lecture', $row->total)->map(fn($r) => [
+                        'id'       => $r->id,
+                        'name'     => $r->name,
+                        'capacity' => $r->capacity,
+                        'type'     => $r->type,
+                    ])->values()->all();
+
                     $subjectEntries[] = [
-                        'subject_id' => $sub->id,
-                        'subject_code' => $sub->code ?? $sub->title ?? 'SUB' . $sub->id,
-                        'title' => $sub->title ?? '',
-                        'room_type' => $sub->room_type ?? 'Lecture',
+                        'subject_id'          => $sub->id,
+                        'subject_code'        => $sub->subject_code,
+                        'title'               => $sub->subject_name,
+                        'room_type'           => $sub->room_type ?? 'Lecture',
                         'candidate_professors' => $candidateProfs,
-                        'candidate_rooms' => $rooms, // could be empty
+                        'candidate_rooms'     => $candidateRooms,
                     ];
-                }
 
-                // create preview section
-                $sectionPreview = [
-                    'course_id' => $course->id,
-                    'course_code' => $course->course_code,
-                    'year_level' => $effectiveYear,
-                    'name' => $sectionName,
-                    'capacity' => $sectionCapacity,
-                    'student_estimate' => (int) ceil($row->total / $requiredSections),
-                    'subjects' => $subjectEntries,
-                ];
-
-                $preview['sections'][] = $sectionPreview;
-
-                // flatten sessions: one session per subject per section
-                foreach ($subjectEntries as $subEntry) {
+                    // Add to scheduling session list
                     $preview['sessions'][] = [
-                        'course_id' => $course->id,
-                        'course_code' => $course->course_code,
-                        'year_level' => $effectiveYear,
-                        'section_name' => $sectionName,
-                        'capacity' => $sectionCapacity,
-                        'subject_id' => $subEntry['subject_id'],
-                        'subject_code' => $subEntry['subject_code'],
-                        'room_type' => $subEntry['room_type'],
-                        'candidate_professors' => $subEntry['candidate_professors'],
-                        'candidate_rooms' => $subEntry['candidate_rooms']
+                        'course_id'           => $course->id,
+                        'course_code'         => $course->course_code,
+                        'year_level'          => $effectiveYear,
+                        'section_name'        => $sectionName,
+                        'capacity'            => $sectionCapacity,
+                        'subject_id'          => $sub->id,
+                        'subject_code'        => $sub->subject_code,
+                        'room_type'           => $sub->room_type ?? 'Lecture',
+                        'candidate_professors' => $candidateProfs,
+                        'candidate_rooms'     => $candidateRooms,
                     ];
                 }
+
+                $preview['sections'][] = [
+                    'course_id'       => $course->id,
+                    'course_code'     => $course->course_code,
+                    'year_level'      => $effectiveYear,
+                    'name'            => $sectionName,
+                    'capacity'        => $sectionCapacity,
+                    'student_estimate' => (int) ceil($row->total / $requiredSections),
+                    'subjects'        => $subjectEntries,
+                ];
             }
         }
 
-
-        // Now attempt to schedule sessions (dry-run uses the solver to propose an assignment)
+        // =======================
+        // 5. RUN THE SOLVER
+        // =======================
         $solverResult = $this->solveScheduling($preview['sessions'], $timeslots, [
-            'fallback_online' => $fallbackOnline,
+            'fallback_online'     => $fallbackOnline,
             'prof_default_max_load' => $profDefaultMaxLoad,
         ]);
 
@@ -253,146 +254,150 @@ class AdminController extends Controller
         if ($dryRun) {
             return response()->json([
                 'preview' => $preview,
-                'message' => 'Dry run complete (including schedule suggestion).'
+                'message' => 'Dry run complete.'
             ]);
         }
 
-        // EXECUTE: create DB records in transaction, but only if solver succeeded fully or we allow partial
+        // =======================
+        // 6. EXECUTE & SAVE RESULTS
+        // =======================
         $result = DB::transaction(function () use (
+            $currentSY,
             $startYear,
             $endYear,
             $semesterId,
             $preview,
-            $sectionCapacity,
-            $currentSY,
             $advanceAY,
             $solverResult
         ) {
-            // fail early if solver couldn't schedule all sessions
+
             if (!$solverResult['success']) {
-                // abort transaction by throwing an exception with details
-                throw new \Exception('Scheduling conflict: not all sessions could be scheduled. See solver result for details.');
+                throw new \Exception("Scheduling conflict: solver could not schedule all sessions.");
             }
 
-            // deactivate current AY if advance requested
-            if ($currentSY && $advanceAY) {
+            // --- Create or transition School Year ---
+            if (!$currentSY) {
+                $newSY = SchoolYear::create([
+                    'year_start' => $startYear,
+                    'year_end'   => $endYear,
+                    'is_active'  => 1,
+                ]);
+            } elseif ($currentSY->year_start == $startYear && $currentSY->year_end == $endYear) {
+                $newSY = $currentSY;
+            } else {
                 $currentSY->update(['is_active' => 0]);
+
+                $newSY = SchoolYear::firstOrCreate(
+                    ['year_start' => $startYear, 'year_end' => $endYear],
+                    ['is_active' => 1]
+                );
+
+                if (!$newSY->is_active) {
+                    $newSY->update(['is_active' => 1]);
+                }
             }
 
-            // create or get target SY
-            $newSY = SchoolYear::firstOrCreate(
-                ['year_start' => $startYear, 'year_end' => $endYear],
-                ['is_active' => $advanceAY ? 1 : 0]
-            );
-            if ($advanceAY && !$newSY->is_active) {
-                $newSY->update(['is_active' => 1]);
-            }
-
-            // ACTIVATE NEW SEMESTER
+            // Activate semester
             Semester::query()->update(['is_active' => false]);
             Semester::where('id', $semesterId)->update(['is_active' => true]);
 
-            // create sections and persist mapping of section name => model
-            $sectionMap = []; // section_name => model
-            foreach ($preview['sections'] as $s) {
+            // Create sections
+            $sectionMap = [];
+            foreach ($preview['sections'] as $sec) {
                 $model = ClassSection::create([
-                    'section_name' => $s['name'],
-                    'course_id' => $s['course_id'],
-                    'year_level' => $s['year_level'],
+                    'section_name' => $sec['name'],
+                    'course_id'    => $sec['course_id'],
+                    'year_level'   => $sec['year_level'],
                     'school_year_id' => $newSY->id,
-                    'semester_id' => $semesterId,
-                    'capacity' => $s['capacity'],
+                    'semester_id'  => $semesterId,
+                    'capacity'     => $sec['capacity'],
                 ]);
-                $sectionMap[$s['name']] = $model;
+                $sectionMap[$sec['name']] = $model;
             }
 
-            // promote students if requested and update school_year_id
-            if ($advanceAY && $currentSY) {
+            // Promote students if necessary
+            if ($advanceAY && $currentSY && $currentSY->id !== $newSY->id) {
                 Student::where('school_year_id', $currentSY->id)->increment('year_level');
                 Student::where('school_year_id', $currentSY->id)->update(['school_year_id' => $newSY->id]);
             } elseif ($currentSY && $currentSY->id !== $newSY->id) {
                 Student::where('school_year_id', $currentSY->id)->update(['school_year_id' => $newSY->id]);
             }
 
-            // // assign students to sections evenly
-            // // group sections by (course_id, year_level)
-            // $sectionsByGroup = [];
-            // foreach ($sectionMap as $sname => $model) {
-            //     $key = $model->course_id . '|' . $model->year_level;
-            //     $sectionsByGroup[$key][] = $model;
-            // }
-            // foreach ($sectionsByGroup as $key => $sections) {
-            //     [$courseId, $yr] = explode('|', $key);
-            //     $students = Student::where('course_id', $courseId)
-            //         ->where('year_level', $yr)
-            //         ->where('school_year_id', $newSY->id)
-            //         ->get();
-            //     $idx = 0;
-            //     foreach ($students as $stu) {
-            //         $target = $sections[$idx % count($sections)];
-            //         // assumes student has class_section_id column
-            //         $stu->class_section_id = $target->id;
-            //         $stu->save();
-            //         $idx++;
-            //     }
-            // }
+            // --- Assign students to sections (round-robin) ---
+            $sectionsByGroup = [];
 
-            // Assign students to subjects inside their correct class section
+            foreach ($sectionMap as $sec) {
+                $key = $sec->course_id . "|" . $sec->year_level;
+                $sectionsByGroup[$key][] = $sec;
+            }
+
+            foreach ($sectionsByGroup as $key => $sections) {
+                [$courseId, $yrLevel] = explode('|', $key);
+
+                $students = Student::where('course_id', $courseId)
+                    ->where('year_level', $yrLevel)
+                    ->where('school_year_id', $newSY->id)
+                    ->get();
+
+                $i = 0;
+                foreach ($students as $stu) {
+                    $target = $sections[$i % count($sections)];
+                    $stu->class_section_id = $target->id;
+                    $stu->save();
+                    $i++;
+                }
+            }
+
+            // --- Assign subjects to students ---
             foreach ($preview['sections'] as $sec) {
 
-                // Find the DB model for this section
                 $sectionModel = $sectionMap[$sec['name']];
 
-                // Get all students who belong to this course + year level
                 $students = Student::where('course_id', $sec['course_id'])
                     ->where('year_level', $sec['year_level'])
                     ->where('school_year_id', $newSY->id)
                     ->get();
 
-                foreach ($students as $student) {
-
+                foreach ($students as $stu) {
                     foreach ($sec['subjects'] as $subjectEntry) {
-
                         StudentSubjectAssignment::create([
-                            'student_id'        => $student->id,
-                            'subject_id'        => $subjectEntry['subject_id'],
-                            'class_section_id'  => $sectionModel->id,
-                            'status'            => 'enrolled'
+                            'student_id'       => $stu->id,
+                            'subject_id'       => $subjectEntry['subject_id'],
+                            'class_section_id' => $sectionModel->id,
+                            'status'           => 'enrolled'
                         ]);
                     }
                 }
             }
 
-            // persist schedules using solver assignment
+            // --- Save final scheduled classes ---
             foreach ($solverResult['assignment'] as $assign) {
-                // find target section model by name
-                $sectionModel = $sectionMap[$assign['section_name']] ?? null;
-                if (!$sectionModel) continue;
-
+                $secModel = $sectionMap[$assign['section_name']];
                 ClassSchedule::create([
-                    'class_section_id' => $sectionModel->id,
-                    'subject_id' => $assign['subject_id'],
-                    'professor_id' => $assign['professor_id'] ?? null,
-                    'room_id' => $assign['room_id'] ?? null,
-                    'day_of_week' => $assign['timeslot']['day'],
-                    'start_time' => $assign['timeslot']['start'],
-                    'end_time' => $assign['timeslot']['end'],
-                    'is_online' => $assign['is_online'] ?? false,
+                    'class_section_id' => $secModel->id,
+                    'subject_id'       => $assign['subject_id'],
+                    'professor_id'     => $assign['professor_id'],
+                    'room_id'          => $assign['room_id'],
+                    'day_of_week'      => $assign['timeslot']['day'],
+                    'start_time'       => $assign['timeslot']['start'],
+                    'end_time'         => $assign['timeslot']['end'],
+                    'is_online'        => $assign['is_online'],
                 ]);
             }
 
             return [
                 'school_year' => $newSY,
                 'sections_created_count' => count($sectionMap),
-                'schedules_created' => count($solverResult['assignment']),
+                'schedules_created'      => count($solverResult['assignment']),
             ];
         });
 
         return response()->json([
-            'message' => 'Master Setup executed successfully',
+            'message' => 'Master Setup executed successfully.',
             'result' => $result
         ]);
     }
+
 
     protected function solveScheduling(array $sessions, array $timeslots, array $options = [])
     {

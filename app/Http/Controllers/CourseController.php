@@ -88,7 +88,7 @@ class CourseController extends Controller
             'subject_code' => 'required|string|unique:subjects,subject_code',
             'subject_name' => 'required|string',
             'units' => 'nullable|integer|min:1',
-            'semester' => 'nullable|string',
+            'semester_id' => 'nullable|number',
             'year_level' => 'nullable|integer|min:1|max:4',
         ]);
 
@@ -120,7 +120,7 @@ class CourseController extends Controller
             'subject_code' => 'required|string|unique:subjects,subject_code,' . $subjectId . ',subject_id',
             'subject_name' => 'required|string',
             'units' => 'nullable|integer|min:1',
-            'semester' => 'nullable|string',
+            'semester_id' => 'nullable|number',
             'year_level' => 'nullable|integer|min:1|max:4',
         ]);
 

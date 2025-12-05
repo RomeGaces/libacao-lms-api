@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class SchoolYearSemesterSeeder extends Seeder
+class SchoolYearSeeder extends Seeder
 {
     public function run()
     {
@@ -17,30 +17,6 @@ class SchoolYearSemesterSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        // Create Semesters
-        $semesters = [
-            [
-                'name' => '1st Semester',
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => '2nd Semester',
-                'is_active' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Summer',
-                'is_active' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ];
-
-        DB::table('semesters')->insert($semesters);
 
         // Set school_settings active values
         DB::table('school_settings')->insert([

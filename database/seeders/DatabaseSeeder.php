@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Semester;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,23 +16,24 @@ class DatabaseSeeder extends Seeder
     {
         // Fixed data
         $this->call([
-            SchoolYearSemesterSeeder::class,
+            //SemesterSeeder::class,
+            //SchoolYearSeeder::class,
             DepartmentSeeder::class,
-            CoursesSeeder::class,
-            RoomsSeeder::class,
+            //CoursesSeeder::class,
+            //RoomsSeeder::class,
             ProfessorsSeeder::class,
-            SubjectsSeeder::class,
+            //SubjectsSeeder::class,
             UserSeeder::class,
         ]);
 
-        // dynamic/factory-driven
-        $this->call([
-            // ensure you have at least one school_year and semester seeded manually or via migration seeder
-            ClassSectionsSeeder::class,
-            SectionSubjectsSeeder::class,
-            StudentSeeder::class,
-            ClassSchedulesSeeder::class,
-            StudentSubjectAssignmentsSeeder::class,
-        ]);
+        // // dynamic/factory-driven
+        // $this->call([
+        //     // ensure you have at least one school_year and semester seeded manually or via migration seeder
+        //     ClassSectionsSeeder::class,
+        //     SectionSubjectsSeeder::class,
+        //     StudentSeeder::class,
+        //     ClassSchedulesSeeder::class,
+        //     StudentSubjectAssignmentsSeeder::class,
+        // ]);
     }
 }

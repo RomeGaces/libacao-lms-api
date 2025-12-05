@@ -356,6 +356,7 @@ class ClassScheduleController extends Controller
             'day_of_week' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            'class_id' => 'nullable|exists:class_schedules,id',
         ]);
 
         if ($validator->fails()) {
@@ -366,6 +367,8 @@ class ClassScheduleController extends Controller
         }
 
         $data = $validator->validated();
+
+        $currentId = $data['class_id'] ?? null;
 
         $day = $data['day_of_week'];
         $start = $data['start_time'];
@@ -378,6 +381,7 @@ class ClassScheduleController extends Controller
         $roomConflict = false;
         if (!empty($data['room_id'])) {
             $roomConflict = ClassSchedule::where('room_id', $data['room_id'])
+                ->when($currentId, fn($q) => $q->where('id', '!=', $currentId))
                 ->where('day_of_week', $day)
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_time', [$start, $end])
@@ -397,6 +401,7 @@ class ClassScheduleController extends Controller
         $professorConflict = false;
         if (!empty($data['professor_id'])) {
             $professorConflict = ClassSchedule::where('professor_id', $data['professor_id'])
+                ->when($currentId, fn($q) => $q->where('id', '!=', $currentId))
                 ->where('day_of_week', $day)
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_time', [$start, $end])
@@ -416,6 +421,7 @@ class ClassScheduleController extends Controller
         $classConflict = false;
         if (!empty($data['class_section_id'])) {
             $classConflict = ClassSchedule::where('class_section_id', $data['class_section_id'])
+                ->when($currentId, fn($q) => $q->where('id', '!=', $currentId))
                 ->where('day_of_week', $day)
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_time', [$start, $end])

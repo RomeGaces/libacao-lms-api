@@ -37,10 +37,10 @@ class AuthController extends Controller
             $token = $user->createToken('api_token')->plainTextToken;
 
             return response()->json([
-                    'user' => $user,
-                    'access_token' => $token,
-                    'token_type' => 'Bearer',
-                ], 200);
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ], 200);
         } catch (\Throwable $e) {
             // 🔹 Step 4: Catch any unexpected errors
             return response()->json([
@@ -53,7 +53,25 @@ class AuthController extends Controller
     }
 
 
+    public function info(Request $request)
+    {
+        $user = $request->user(); // current authenticated user
 
+        return response()->json([
+            'code' => 200,
+            'msg' => 'get success',
+            'data' => [
+                'id' => $user->id,
+                'username' => $user->name,
+                'nickname' => $user->name,
+                'avatar' => 'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png',
+                // 'avatar' => $user->avatar
+                //     ?? 'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png',
+                //'roles' => $user->is_admin ? ['ADMIN'] : ['PROFESSOR'], // or adjust
+                'roles' => ['ADMIN']
+            ]
+        ]);
+    }
 
     public function logout(Request $request)
     {

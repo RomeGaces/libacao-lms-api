@@ -13,6 +13,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentSubjectAssignmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\SemesterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +28,7 @@ use App\Http\Controllers\AdminController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->get('/user/info', [AuthController::class, 'info']);
 
 Route::middleware('auth:sanctum')->apiResource('departments', DepartmentController::class);
 
@@ -157,3 +159,9 @@ Route::middleware('auth:sanctum')
 // CONFLICT CHECK (SHOULD BE PROTECTED)
 Route::middleware('auth:sanctum')
     ->post('schedules/check-conflict', [ClassScheduleController::class, 'checkConflict']);
+
+Route::middleware('auth:sanctum')->get('/semesters', [SemesterController::class, 'index']);
+Route::middleware('auth:sanctum')->post('/semesters', [SemesterController::class, 'store']);
+Route::middleware('auth:sanctum')->put('/semesters/{id}', [SemesterController::class, 'update']);
+Route::middleware('auth:sanctum')->delete('/semesters/{id}', [SemesterController::class, 'destroy']);
+

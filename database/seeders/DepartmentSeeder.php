@@ -22,15 +22,15 @@ class DepartmentSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            [
-                'department_code' => 'DA',
-                'department_name' => 'Department of Accountancy',
-                'office_location' => 'Business Building 1F',
-                'contact_email' => 'da@school.edu.ph',
-                'contact_number' => '+63 2 8888 0002',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+            // [
+            //     'department_code' => 'DA',
+            //     'department_name' => 'Department of Accountancy',
+            //     'office_location' => 'Business Building 1F',
+            //     'contact_email' => 'da@school.edu.ph',
+            //     'contact_number' => '+63 2 8888 0002',
+            //     'created_at' => now(),
+            //     'updated_at' => now(),
+            // ],
         ]);
     }
 }
