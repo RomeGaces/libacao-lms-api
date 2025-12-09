@@ -163,6 +163,8 @@ class StudentController extends Controller
         return $query->orderBy('last_name')->limit(100)->get();
     }
 
+
+    
     /** Get single student with course */
     public function show($id)
     {

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\SchoolYear;
@@ -131,7 +130,8 @@ class AdminController extends Controller
         // 2. LOAD ALL STUDENTS (NO FILTERING!)
         // =======================
         // Always include ALL students. This ensures correct preview even during first setup.
-        $studentCounts = Student::select('course_id', 'year_level', DB::raw('COUNT(*) as total'))
+        $studentCounts = Student::where('status', 'Enrolled')
+            ->select('course_id', 'year_level', DB::raw('COUNT(*) as total'))
             ->groupBy('course_id', 'year_level')
             ->get();
 
@@ -321,6 +321,9 @@ class AdminController extends Controller
                 Student::where('school_year_id', $currentSY->id)->update(['school_year_id' => $newSY->id]);
             } elseif ($currentSY && $currentSY->id !== $newSY->id) {
                 Student::where('school_year_id', $currentSY->id)->update(['school_year_id' => $newSY->id]);
+            } elseif (!$currentSY) {
+                // FIRST TIME SETUP
+                Student::whereNull('school_year_id')->update(['school_year_id' => $newSY->id]);
             }
 
             // --- Assign students to sections (round-robin) ---
@@ -337,13 +340,12 @@ class AdminController extends Controller
                 $students = Student::where('course_id', $courseId)
                     ->where('year_level', $yrLevel)
                     ->where('school_year_id', $newSY->id)
+                    ->where('status', 'Active')
                     ->get();
 
                 $i = 0;
                 foreach ($students as $stu) {
                     $target = $sections[$i % count($sections)];
-                    $stu->class_section_id = $target->id;
-                    $stu->save();
                     $i++;
                 }
             }

@@ -14,6 +14,7 @@ use App\Http\Controllers\StudentSubjectAssignmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\ImportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -118,6 +119,7 @@ Route::middleware('auth:sanctum')->prefix('students')->group(function () {
     // DYNAMIC ROUTES LAST
     Route::get('/{id}/schedule', [StudentController::class, 'schedule']);
     Route::get('/{id}/transcript', [StudentController::class, 'transcript']);
+    Route::post('/upload', [StudentController::class, 'uploadCsv']);
     Route::put('/{id}', [StudentController::class, 'update']);
     Route::delete('/{id}', [StudentController::class, 'destroy']);
     Route::get('/{id}', [StudentController::class, 'show']);   // ALWAYS LAST
@@ -165,3 +167,8 @@ Route::middleware('auth:sanctum')->post('/semesters', [SemesterController::class
 Route::middleware('auth:sanctum')->put('/semesters/{id}', [SemesterController::class, 'update']);
 Route::middleware('auth:sanctum')->delete('/semesters/{id}', [SemesterController::class, 'destroy']);
 
+// routes/api.php
+Route::post('/import/students', [ImportController::class, 'importStudents']);
+Route::post('/import/professors', [ImportController::class, 'importProfessors']);
+Route::post('/import/curriculum', [ImportController::class, 'importCurriculum']);
+Route::post('/import/tor', [ImportController::class, 'importTor']);

@@ -27,7 +27,7 @@ return new class extends Migration
                 $table->string('address')->nullable();
 
                 $table->date('enrollment_date')->nullable();
-                $table->enum('status', ['Enrolled', 'Dropped', 'Graduated', 'Inactive'])->default('Enrolled');
+                $table->enum('status', ['Active', 'Dropped', 'Graduated', 'Inactive'])->default('Active');
 
                 $table->foreignId('course_id')
                     ->constrained('courses')
